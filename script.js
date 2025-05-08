@@ -3,21 +3,131 @@ document.addEventListener('DOMContentLoaded', function() {
 }, false);
 
 function initializeApp() {
+  math.config({
+    number: 'BigNumber',
+    precision: 64
+  });
+
+  extendMathJsWithBaseConversions();
+  
+  const showErrorsState = localStorage.getItem('showErrors');
+  if (showErrorsState !== null) {
+    $('#showErrors').prop('checked', showErrorsState === 'true');
+  }
+  
   const hashvalue = window.location.hash.substring(1);
   if (hashvalue.length > 4) {
     $('#frame1').val(b64_to_utf8(hashvalue));
   }
   evalMath();
 
-  $('#frame1').on('keyup change', function() {
+  // Direct evaluation with multiple events to catch all typing scenarios
+  $('#frame1').on('keyup input change', function() {
     evalMath();
-    const encodedMath = utf8_to_b64($('#frame1').val());
-    window.location.hash = encodedMath;
+    // Only update hash when needed, not on every keypress
+    if (!$(this).data('typing')) {
+      $(this).data('typing', true);
+      setTimeout(() => {
+        const encodedMath = utf8_to_b64($('#frame1').val());
+        window.location.hash = encodedMath;
+        $(this).data('typing', false);
+      }, 1000); // Only update URL hash once per second
+    }
   });
 
-  $('.linked').scroll(function() {
-    $('.bed-highlights').css('transform', `translateY(${-this.scrollTop}px)`);
+  // Save checkbox state to localStorage when changed
+  $('#showErrors').on('change', function() {
+    localStorage.setItem('showErrors', $(this).is(':checked'));
+    evalMath();
   });
+
+  // Improved scroll sync - this handles the horizontal scrolling properly
+  $('#frame1').on('scroll', function() {
+    $('.bed-highlights').css('transform', `translate(${-this.scrollLeft}px, ${-this.scrollTop}px)`);
+  });
+}
+
+/**
+ * Extends math.js with custom functions for base conversions
+ */
+function extendMathJsWithBaseConversions() {
+  // Define base conversion configurations
+  const baseConfigs = {
+    hex: { base: 16, prefix: '0x' },
+    bin: { base: 2, prefix: '0b' },
+    oct: { base: 8, prefix: '0o' },
+    dec: { base: 10, prefix: '' }
+  };
+  
+  // Create conversion functions dynamically
+  const conversions = {};
+  
+  // Create to_base functions
+  Object.keys(baseConfigs).forEach(baseType => {
+    conversions[`to_${baseType}`] = function(value) {
+      // Check if it's a unit
+      if (math.typeOf(value) === 'Unit') {
+        throw new Error('Must be unitless');
+      }
+      
+      // For non-decimal bases, check for floating point
+      if (baseType !== 'dec' && (!Number.isInteger(Number(value)))) {
+        throw new Error(`Can't convert fractional numbers to ${baseType}`);
+      }
+      
+      if (baseType === 'dec') {
+        return math.format(value, {notation: 'fixed'});
+      } else {
+        return math.format(value, {notation: baseType, fraction: 'decimal'}).toLowerCase();
+      }
+    };
+  });
+  
+  // Create from_base functions (except dec which is handled by default)
+  Object.keys(baseConfigs).forEach(baseType => {
+    if (baseType === 'dec') return; // Skip dec as it's the default
+    const config = baseConfigs[baseType];
+    conversions[`from_${baseType}`] = function(value) {
+      if (typeof value === 'string') {
+        value = value.toLowerCase().replace(new RegExp(`^${config.prefix}`), '');
+      }
+      return parseInt(value, config.base);
+    };
+  });
+  
+  // Import all conversion functions
+  math.import(conversions);
+  
+  // Override math.parse to handle base conversion expressions
+  const originalParse = math.parse;
+  math.parse = function(expr) {
+    if (typeof expr === 'string') {
+      // Process base literals
+      Object.keys(baseConfigs).forEach(baseType => {
+        if (baseType === 'dec') return; // Skip dec as it has no prefix
+        const config = baseConfigs[baseType];
+        const regex = new RegExp(`${config.prefix}([0-9a-fA-F]+)`, 'g');
+        expr = expr.replace(regex, `from_${baseType}("$1")`);
+      });
+      
+      // Process natural language expressions
+      const conversionKeywords = ['in', 'to'];
+      conversionKeywords.forEach(keyword => {
+        Object.keys(baseConfigs).forEach(baseType => {
+          // Match the entire expression before the conversion keyword
+          const pattern = new RegExp(`(.+?)\\s+${keyword}\\s+${baseType}(?:\\b|$)`, 'gi');
+          expr = expr.replace(pattern, (match, group) => {
+            // Check for balanced parentheses in the group
+            if (group.trim()) {
+              return `to_${baseType}(${group})`;
+            }
+            return match; // If no group captured, return the original match
+          });
+        });
+      });
+    }
+    return originalParse.call(math, expr);
+  };
 }
 
 function utf8_to_b64(str) {
@@ -33,6 +143,7 @@ function evalMath() {
   let output = '';
   let input = [];
   let formulas = $('#frame1').val();
+  const showErrors = $('#showErrors').is(':checked');
 
   if (formulas.includes(",") && !formulas.includes(".")) {
     formulas = formulas.replace(/(\d+),(\d+)/gi, "$1.$2");
@@ -46,18 +157,19 @@ function evalMath() {
 
   arrayOfLines.forEach(item => {
     if (containsSumKeyword(item)) {
-      if (localSum.isZero() && globalSum.isZero()) {
-        output += `${item} = 0\n`;
-      } else {
-        const displaySum = units ? globalSum.toString() + units : globalSum.toString();
-        output += `${item} = ${displaySum}\n`;
-        localSum = math.bignumber(0); // Reset local sum after each Summe keyword
-      }
+      const displaySum = units ? localSum.toString() + units.simplify() : localSum.toString();
+      output += `${item}\t<span class="sum-value">${displaySum}</span>\n`;
+      localSum = math.bignumber(0); // Reset local sum after each Summe keyword
     } else {
       try {
         parser.evaluate(item);
       } catch (err) {
-        output += `${item} = ${err}\n`;
+        if (showErrors) {
+          output += `${item} <span class="error-text">&lt;${err.message}&gt;</span>\n`;
+        } else {
+          output += `${item}\n`;
+        }
+        console.error(`Error evaluating item: "${item}": ${err.message}`);
         return;
       }
 
@@ -68,12 +180,18 @@ function evalMath() {
       const lastResult = getLastResult(parser, input);
       if (lastResult) {
         try {
-          const { updatedSum, updatedUnits } = updateSum(localSum, globalSum, lastResult, units);
-          localSum = updatedSum.localSum;
-          globalSum = updatedSum.globalSum;
-          units = updatedUnits || units;
+          obj = {
+            localSum: localSum,
+            globalSum: globalSum,
+            units: units
+          };
+          updateSum(obj, lastResult);
+          localSum = obj.localSum;
+          globalSum = obj.globalSum;
+          units = obj.units || units;
         } catch (err) {
-          output += `${item} = ${err.message}\n`;
+          output += `${item} <span class="error-text">&lt;${err.message}&gt;</span>\n`;
+          console.error(`Error updating sum for item: ${item}`, err);
           return;
         }
       }
@@ -96,47 +214,70 @@ function getLastResult(parser, input) {
   return null;
 }
 
-function updateSum(localSum, globalSum, lastResult, units) {
+function updateSum(obj, lastResult) {
   if (math.typeOf(lastResult) === 'Unit') {
-    const unitName = lastResult.units[0].unit.name;
-    const lastResultValue = lastResult.toNumber(unitName);
-
-    if (!units || units === unitName) {
-      return {
-        updatedSum: {
-          localSum: localSum.add(lastResultValue),
-          globalSum: globalSum.add(lastResultValue),
-        },
-        updatedUnits: unitName
-      };
-    } else {
-      throw new Error('Units do not match');
+    const unitSI = lastResult.toSI();
+    const valueSI = unitSI.toNumeric();
+    
+    // If units change, reset both sums
+    if (obj.units === null || !unitSI.equalBase(obj.units)) {
+      obj.localSum = valueSI;
+      obj.globalSum = valueSI;
+      obj.units = unitSI;
+      return;
     }
+    
+    obj.localSum = obj.localSum.add(valueSI);
+    obj.globalSum = obj.globalSum.add(valueSI);
+    obj.units = unitSI;
   } else if (typeof lastResult === 'number' || math.typeOf(lastResult) === 'BigNumber') {
-    return {
-      updatedSum: {
-        localSum: localSum.add(lastResult),
-        globalSum: globalSum.add(lastResult),
-      },
-      updatedUnits: units
-    };
+    // If we had units before but now we don't, reset sums
+    if (obj.units !== null) {
+      obj.localSum = math.bignumber(lastResult);
+      obj.globalSum = math.bignumber(lastResult);
+      obj.units = null;
+    }
+
+    obj.localSum = obj.localSum.add(lastResult);
+    obj.globalSum = obj.globalSum.add(lastResult);
   }
-  return { updatedSum: { localSum, globalSum }, updatedUnits: units };
 }
 
 function evaluateItem(parser, input, item, maxLen) {
-  if (parser.evaluate(input) === undefined || item.trim() === '') {
+  if (item.trim() === '') {
     return `${item}\n`;
-  } else {
-    const ev_raw = parser.evaluate(input).slice(-1);
-    const ev_str = JSON.stringify(ev_raw);
-    if (ev_raw !== undefined && ev_str !== "[null]") {
-      const spacing = ' '.repeat(maxLen - item.length);
-      return `${item}${spacing} = ${ev_raw}\n`;
-    } else {
-      return `${item}\n`;
+  }
+  
+  const result = parser.evaluate(input);
+  if (result === undefined) {
+    return `${item}\n`;
+  }
+  
+  const ev_raw = result.slice(-1);
+  const ev_str = JSON.stringify(ev_raw);
+  
+  if (ev_raw === undefined || ev_str === "[null]") {
+    return `${item}\n`;
+  } 
+
+  const spacing = "\t";
+  
+  // Check if the expression has a base conversion pattern like "to hex", "to bin", etc.
+  const baseMatch = item.match(/\bto\s+(hex|bin|oct|dec)\b/i);
+  
+  if (baseMatch && typeof ev_raw[0] !== 'undefined') {
+    const base = baseMatch[1].toLowerCase();
+    // Use the existing conversion functions instead of duplicating logic
+    try {
+      // Use the to_base function we already defined in extendMathJsWithBaseConversions
+      const convertedValue = math.evaluate(`to_${base}(${ev_raw})`);
+      return `${item}${spacing} = ${convertedValue}\n`;
+    } catch (e) {
+      console.error(`Base conversion error: ${e.message}`);
     }
   }
+  
+  return `${item}${spacing}${ev_raw}\n`;
 }
 
 function clearTextarea() {

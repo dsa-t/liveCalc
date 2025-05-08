@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.1.0/math.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/14.2.1/math.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="./script.js"></script>
   <link rel="shortcut icon" type="image/x-icon" href="https://simonwaldherr.github.io/liveCalc/favicon.ico">
@@ -16,14 +16,13 @@
 </head>
 <body>
   <div id="top">
-    <h1>liveCalc</h1>
-    <div class="links">
-      <a href="https://mathjs.org/"><img src="https://img.shields.io/badge/powered%20by-mathjs-blue" alt="Powered by Math.js"></a>
-      <a href="https://github.com/SimonWaldherr/liveCalc/"><img src="https://img.shields.io/badge/hosted%20on-github-green" alt="Hosted on GitHub"></a>
-      <a href="" onclick="clearTextarea(); return false;"><img src="https://img.shields.io/badge/clear-textarea-gray" alt="Clear Textarea"></a>
-      <a href="" onclick="insertExample(); return false;"><img src="https://img.shields.io/badge/insert-example-gray" alt="Insert Example"></a>
-      <a href="" onclick="downloadMath(); return false;"><img src="https://img.shields.io/badge/download%20math-as%20.txt-gray" alt="Download Math"></a>
-      <a href="" onclick="copyURLtoClipboard(); return false;"><img src="https://img.shields.io/badge/copy%20link-to%20clipboard-gray" alt="Copy Link to Clipboard"></a>
+    <h4 class="title">liveCalc</h4>
+    <div class="controls">
+      <a href="#" class="btn control" onclick="clearTextarea(); return false;">Clear</a>
+      <!-- <a href="#" class="btn control" onclick="insertExample(); return false;">Example</a> -->
+      <a href="#" class="btn control" onclick="downloadMath(); return false;">Save</a>
+      <a href="#" class="btn control" onclick="copyURLtoClipboard(); return false;">Copy Link</a>
+      <label class="toggle control"><input type="checkbox" id="showErrors"> Errors</label>
     </div>
   </div>
   <div class="content">
@@ -59,10 +58,6 @@
         var encodedMath = utf8_to_b64($('#frame1').val());
         window.location.hash = encodedMath;
       })
-      
-      $('.linked').scroll(function() {
-        $('.bed-highlights').css('transform', `translateY(${-this.scrollTop}px)`);
-      });
       
     }, false);
     
