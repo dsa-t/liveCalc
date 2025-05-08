@@ -43,24 +43,6 @@
       epsilon: 1e-60
     })
     
-    document.addEventListener('DOMContentLoaded', function() {
-      var hashvalue = window.location.hash.substring(1);
-      
-      if (hashvalue.length > 4) {
-        $('#frame1').val(b64_to_utf8(hashvalue));
-      }
-      
-      evalMath();
-      
-      
-      $("#frame1").on("keyup change", function(e) {
-        evalMath();
-        var encodedMath = utf8_to_b64($('#frame1').val());
-        window.location.hash = encodedMath;
-      })
-      
-    }, false);
-    
   </script>
 </body>
 </html>

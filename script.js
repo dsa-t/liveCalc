@@ -18,6 +18,12 @@ function initializeApp() {
   const hashvalue = window.location.hash.substring(1);
   if (hashvalue.length > 4) {
     $('#frame1').val(b64_to_utf8(hashvalue));
+  } else {
+    // If no hash value, try to restore from localStorage
+    const lastInput = localStorage.getItem('liveCalcLastInput');
+    if (lastInput) {
+      $('#frame1').val(lastInput);
+    }
   }
   evalMath();
 
@@ -30,6 +36,8 @@ function initializeApp() {
       setTimeout(() => {
         const encodedMath = utf8_to_b64($('#frame1').val());
         window.location.hash = encodedMath;
+        // Save current input to localStorage
+        localStorage.setItem('liveCalcLastInput', $('#frame1').val());
         $(this).data('typing', false);
       }, 1000); // Only update URL hash once per second
     }
@@ -157,7 +165,7 @@ function evalMath() {
 
   arrayOfLines.forEach(item => {
     if (containsSumKeyword(item)) {
-      const displaySum = units ? localSum.toString() + units.simplify() : localSum.toString();
+      const displaySum = units ? new math.Unit(localSum, units).simplify() : localSum.toString();
       output += `${item}\t<span class="sum-value">${displaySum}</span>\n`;
       localSum = math.bignumber(0); // Reset local sum after each Summe keyword
     } else {
@@ -188,7 +196,7 @@ function evalMath() {
           updateSum(obj, lastResult);
           localSum = obj.localSum;
           globalSum = obj.globalSum;
-          units = obj.units || units;
+          units = obj.units;
         } catch (err) {
           output += `${item} <span class="error-text">&lt;${err.message}&gt;</span>\n`;
           console.error(`Error updating sum for item: ${item}`, err);
@@ -216,9 +224,13 @@ function getLastResult(parser, input) {
 
 function updateSum(obj, lastResult) {
   if (math.typeOf(lastResult) === 'Unit') {
-    const unitSI = lastResult.toSI();
-    const valueSI = unitSI.toNumeric();
+    const lastResultSI = lastResult.toSI();
+    const valueSI = lastResultSI.toNumeric();
     
+    // Make it valueless
+    unitSI = lastResultSI;
+    unitSI.value = null;
+    5
     // If units change, reset both sums
     if (obj.units === null || !unitSI.equalBase(obj.units)) {
       obj.localSum = valueSI;
