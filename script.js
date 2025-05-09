@@ -458,5 +458,78 @@ function downloadMath() {
 }
 
 function copyURLtoClipboard() {
-  navigator.clipboard.writeText(window.location.href);
+  const url = window.location.href;
+  
+  // Try using the modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        showCopyMessage('Link copied to clipboard!');
+      })
+      .catch(err => {
+        // If clipboard API fails, use fallback method
+        fallbackCopyToClipboard(url);
+      });
+  } else {
+    // Fallback for browsers/webviews that don't support clipboard API
+    fallbackCopyToClipboard(url);
+  }
+}
+
+function fallbackCopyToClipboard(text) {
+  try {
+    // Create a temporary input element
+    const tempInput = document.createElement('input');
+    tempInput.style.position = 'fixed';
+    tempInput.style.opacity = '0';
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    
+    // For mobile devices
+    tempInput.contentEditable = true;
+    tempInput.readOnly = false;
+    
+    // Select the text and copy
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999); // For mobile devices
+    
+    const successful = document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    
+    if (successful) {
+      showCopyMessage('Link copied to clipboard');
+    } else {
+      showCopyMessage('Copy failed. Please copy the URL from the address bar.');
+    }
+  } catch (err) {
+    showCopyMessage('Copy failed. Please copy the URL from the address bar.');
+  }
+}
+
+function showCopyMessage(message) {
+  // Create or get existing message element
+  let messageElement = document.getElementById('copyMessage');
+  if (!messageElement) {
+    messageElement = document.createElement('div');
+    messageElement.id = 'copyMessage';
+    messageElement.style.position = 'fixed';
+    messageElement.style.top = '10%';
+    messageElement.style.left = '50%';
+    messageElement.style.transform = 'translateX(-50%)';
+    messageElement.style.background = 'rgba(0,0,0,0.7)';
+    messageElement.style.color = 'white';
+    messageElement.style.padding = '10px 15px';
+    messageElement.style.borderRadius = '4px';
+    messageElement.style.zIndex = '1000';
+    document.body.appendChild(messageElement);
+  }
+  
+  // Set the message and show
+  messageElement.textContent = message;
+  messageElement.style.display = 'block';
+  
+  // Hide after 2 seconds
+  setTimeout(() => {
+    messageElement.style.display = 'none';
+  }, 2000);
 }
