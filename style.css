@@ -204,7 +204,7 @@ body {
 
 @media (max-width: 400px) {
   #top h4.title {
-    font-size: 0.7em;
+    font-size: 0.9em;
     margin-right: 2px;
     max-width: 80px;
   }
