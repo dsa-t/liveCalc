@@ -1,16 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
-  const DEFAULT_PRECISION = 20;
-  loadSettings(DEFAULT_PRECISION);
+const DEFAULT_PRECISION = 20;
 
-  initializeApp(DEFAULT_PRECISION);
-  initializeModal(DEFAULT_PRECISION);
+document.addEventListener('DOMContentLoaded', function() {
+  loadSettings();
+  initializeApp();
+  initializeModal();
   initializeDarkMode();
 
   evalMath();
 }, false);
 
-function initializeApp(defaultPrecision) {
-  const precision = parseInt(localStorage.getItem('precision')) || defaultPrecision;
+function initializeApp() {
+  const precision = parseInt(localStorage.getItem('precision')) || DEFAULT_PRECISION;
   
   math.config({
     number: 'BigNumber',
@@ -50,18 +50,18 @@ function initializeApp(defaultPrecision) {
   });
 }
 
-function initializeModal(defaultPrecision) {
+function initializeModal() {
   const modal = document.getElementById("settingsModal");
   const closeBtn = modal.querySelector(".close");
   
   closeBtn.onclick = function() {
-    saveSettings(defaultPrecision);
+    saveSettings();
     modal.style.display = "none";
   }
   
   window.onclick = function(event) {
     if (event.target == modal) {
-      saveSettings(defaultPrecision);
+      saveSettings();
       modal.style.display = "none";
     }
   }
@@ -83,7 +83,7 @@ function initializeModal(defaultPrecision) {
   });
   
   $('#precision').on('change', function() {
-    const precision = parseInt($(this).val()) || defaultPrecision;
+    const precision = parseInt($(this).val()) || DEFAULT_PRECISION;
     localStorage.setItem('precision', precision);
     updatePrecisionConfig(precision);
     evalMath();
@@ -116,7 +116,7 @@ function openSettings() {
   modal.style.display = "block";
 }
 
-function loadSettings(defaultPrecision) {
+function loadSettings() {
   const showErrorsState = localStorage.getItem('showErrors');
   const showErrors = showErrorsState !== null ? showErrorsState === 'true' : true;
   $('#showErrors').prop('checked', showErrors);
@@ -131,15 +131,15 @@ function loadSettings(defaultPrecision) {
   $('#useSpaces').prop('checked', useSpaces);
   
   const precisionState = localStorage.getItem('precision');
-  const precision = precisionState !== null ? parseInt(precisionState) : defaultPrecision;
-  $('#precision').val(precision);
+  const precision = precisionState !== null ? parseInt(precisionState) : DEFAULT_PRECISION;
+  $('#precision').val(precision || DEFAULT_PRECISION);
 }
 
-function saveSettings(defaultPrecision) {
+function saveSettings() {
   const showErrors = $('#showErrors').is(':checked');
   const darkMode = $('#darkMode').is(':checked');
   const useSpaces = $('#useSpaces').is(':checked');
-  const precision = parseInt($('#precision').val()) || defaultPrecision;
+  const precision = parseInt($('#precision').val()) || DEFAULT_PRECISION;
   
   localStorage.setItem('showErrors', showErrors);
   localStorage.setItem('darkMode', darkMode);
