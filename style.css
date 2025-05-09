@@ -9,6 +9,58 @@ body {
   max-width: 600px;
 }
 
+/* Dropdown Menu Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 200px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 100;
+  border-radius: 4px;
+  right: 0;
+}
+
+.dropdown-content a {
+  color: #333;
+  padding: 10px 12px;
+  text-decoration: none;
+  display: block;
+  font-size: 0.9em;
+}
+
+.dropdown-content a:hover {
+  background-color: #f1f1f1;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+body.dark-mode .dropdown-content {
+  background-color: #333;
+}
+
+body.dark-mode .dropdown-content a {
+  color: #e0e0e0;
+}
+
+body.dark-mode .dropdown-content a:hover {
+  background-color: #444;
+}
+
+@media (max-width: 400px) {
+  .dropdown-content {
+    min-width: 150px;
+    right: -50px;
+  }
+}
+
 #top {
   background-color: #f4f4f4;
   padding: 5px 10px;

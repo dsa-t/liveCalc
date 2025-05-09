@@ -21,8 +21,16 @@
     <div class="controls">
       <a href="#" class="btn control" onclick="clearTextarea(); return false;">Clear</a>
       <!-- <a href="#" class="btn control" onclick="insertExample(); return false;">Example</a> -->
-      <a href="#" class="btn control" onclick="downloadMath(); return false;">Save</a>
-      <a href="#" class="btn control" onclick="copyURLtoClipboard(); return false;">Copy Link</a>
+      <div class="dropdown">
+        <a href="#" class="btn control" onclick="return false;">Export</a>
+        <div class="dropdown-content">
+          <a href="#" onclick="downloadInput(); return false;">Download Input (TXT)</a>
+          <a href="#" onclick="downloadResults(); return false;">Download Results (TXT)</a>
+          <a href="#" onclick="copyInput(); return false;">Copy Input</a>
+          <a href="#" onclick="copyResults(); return false;">Copy Results</a>
+          <a href="#" onclick="copyURLtoClipboard(); return false;">Copy Link</a>
+        </div>
+      </div>
       <a href="#" class="btn control" id="settingsBtn" onclick="openSettings(); return false;">Settings</a>
     </div>
   </div>
@@ -59,7 +67,7 @@
         </div>
         <div class="setting-item">
           <label class="setting-label">
-            <input type="checkbox" id="useSpaces"> 
+            <input type="checkbox" id="alignToMaxLength"> 
             Align Results at Max Length
           </label>
         </div>

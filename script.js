@@ -77,8 +77,8 @@ function initializeModal() {
     applyDarkMode(isDarkMode);
   });
   
-  $('#useSpaces').on('change', function() {
-    localStorage.setItem('useSpaces', $(this).is(':checked'));
+  $('#alignToMaxLength').on('change', function() {
+    localStorage.setItem('alignToMaxLength', $(this).is(':checked'));
     evalMath();
   });
   
@@ -126,9 +126,10 @@ function loadSettings() {
   const darkMode = darkModeState !== null ? darkModeState === 'true' : prefersDarkScheme;
   $('#darkMode').prop('checked', darkMode);
   
-  const alignmentState = localStorage.getItem('useSpaces');
-  const useSpaces = alignmentState !== null ? alignmentState === 'true' : false;
-  $('#useSpaces').prop('checked', useSpaces);
+  // Simple alignment state check without backward compatibility
+  const alignmentState = localStorage.getItem('alignToMaxLength');
+  const alignToMaxLength = alignmentState !== null ? alignmentState === 'true' : false;
+  $('#alignToMaxLength').prop('checked', alignToMaxLength);
   
   const precisionState = localStorage.getItem('precision');
   const precision = precisionState !== null ? parseInt(precisionState) : DEFAULT_PRECISION;
@@ -138,15 +139,14 @@ function loadSettings() {
 function saveSettings() {
   const showErrors = $('#showErrors').is(':checked');
   const darkMode = $('#darkMode').is(':checked');
-  const useSpaces = $('#useSpaces').is(':checked');
+  const alignToMaxLength = $('#alignToMaxLength').is(':checked');
   const precision = parseInt($('#precision').val()) || DEFAULT_PRECISION;
   
   localStorage.setItem('showErrors', showErrors);
   localStorage.setItem('darkMode', darkMode);
-  localStorage.setItem('useSpaces', useSpaces);
+  localStorage.setItem('alignToMaxLength', alignToMaxLength);
   localStorage.setItem('precision', precision);
   
-  // Update math precision config when settings are saved
   updatePrecisionConfig(precision);
   evalMath();
 }
@@ -277,7 +277,7 @@ function evalMath() {
   let formulas = $('#frame1').val();
   
   const showErrors = localStorage.getItem('showErrors') !== 'false';
-  const useSpaces = localStorage.getItem('useSpaces') === 'true';
+  const alignToMaxLength = localStorage.getItem('alignToMaxLength') === 'true';
 
   if (formulas.includes(",") && !formulas.includes(".")) {
     formulas = formulas.replace(/(\d+),(\d+)/gi, "$1.$2");
@@ -293,7 +293,7 @@ function evalMath() {
     if (containsSumKeyword(item)) {
       const displaySum = units ? new math.Unit(localSum, units).simplify() : localSum.toString();
       
-      if (useSpaces) {
+      if (alignToMaxLength) {
         const spacesNeeded = Math.max(1, maxLen - item.length + 2);
         const spacing = ' '.repeat(spacesNeeded);
         output += `${item}${spacing}<span class="sum-value">${displaySum}</span>\n`;
@@ -316,7 +316,7 @@ function evalMath() {
       }
 
       input.push(item);
-      const evaluationResult = evaluateItem(parser, input, item, maxLen, useSpaces);
+      const evaluationResult = evaluateItem(parser, input, item, maxLen, alignToMaxLength);
       output += evaluationResult;
 
       const lastResult = getLastResult(parser, input);
@@ -359,7 +359,7 @@ function getLastResult(parser, input) {
 function updateSum(obj, lastResult) {
   if (math.typeOf(lastResult) === 'Unit') {
     const lastResultSI = lastResult.toSI();
-    const valueSI = lastResultSI.toNumeric();
+    const valueSI = math.bignumber(lastResultSI.toNumeric());
     
     unitSI = lastResultSI;
     unitSI.value = null;
@@ -386,7 +386,7 @@ function updateSum(obj, lastResult) {
   }
 }
 
-function evaluateItem(parser, input, item, maxLen, useSpaces) {
+function evaluateItem(parser, input, item, maxLen, alignToMaxLength) {
   if (item.trim() === '') {
     return `${item}\n`;
   }
@@ -405,7 +405,7 @@ function evaluateItem(parser, input, item, maxLen, useSpaces) {
 
   let spacing;
   
-  if (useSpaces) {
+  if (alignToMaxLength) {
     const spacesNeeded = Math.max(1, maxLen - item.length + 2);
     spacing = ' '.repeat(spacesNeeded);
   } else {
@@ -450,33 +450,79 @@ function download(filename, text) {
   document.body.removeChild(element);
 }
 
-function downloadMath() {
-  const filename = window.prompt('Save calculation as:', 'liveCalc.txt');
-  const content = $("#highlights1").text().replace(/ +/g, " ");
+function getFormattedDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+}
+
+function downloadInput() {
+  const dateTime = getFormattedDateTime();
+  const filename = `liveCalc_input_${dateTime}.txt`;
+  const content = $("#frame1").val();
   download(filename, content);
   return false;
 }
 
-function copyURLtoClipboard() {
-  const url = window.location.href;
+function downloadResults() {
+  const dateTime = getFormattedDateTime();
+  const filename = `liveCalc_results_${dateTime}.txt`;
   
+  const content = formatResultsWithPrefix();
+  download(filename, content);
+  return false;
+}
+
+function downloadMath() {
+  return downloadResults();
+}
+
+function formatResultsWithPrefix() {
+  // Get the user's alignment preference from localStorage
+  const alignToMaxLength = localStorage.getItem('alignToMaxLength') === 'true';
+  
+  // Format content and add # prefix to results lines
+  return $("#highlights1").text().split('\n').map(line => {
+    // Use different splitting logic based on user's preference
+    const parts = alignToMaxLength ? line.split(/\s{2,}/) : line.split(/\t/);
+    
+    if (parts.length > 1) {
+      // It's a line with results
+      const input = parts[0];
+      const result = parts.slice(1).join(' ').trim();
+      if (result) {
+        // Format the output based on user's preference
+        return input + (alignToMaxLength ? '  ' : '\t') + '# ' + result;
+      }
+    }
+    return line;
+  }).join('\n');
+}
+
+function copyToClipboard(text, successMsg = 'Copied to clipboard!') {
   // Try using the modern clipboard API first
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url)
+    navigator.clipboard.writeText(text)
       .then(() => {
-        showCopyMessage('Link copied to clipboard!');
+        showCopyMessage(successMsg);
       })
       .catch(err => {
         // If clipboard API fails, use fallback method
-        fallbackCopyToClipboard(url);
+        fallbackCopyToClipboard(text, successMsg);
       });
   } else {
     // Fallback for browsers/webviews that don't support clipboard API
-    fallbackCopyToClipboard(url);
+    fallbackCopyToClipboard(text, successMsg);
   }
 }
 
-function fallbackCopyToClipboard(text) {
+function fallbackCopyToClipboard(text, successMsg = 'Copied to clipboard!') {
   try {
     // Create a temporary input element
     const tempInput = document.createElement('input');
@@ -497,13 +543,31 @@ function fallbackCopyToClipboard(text) {
     document.body.removeChild(tempInput);
     
     if (successful) {
-      showCopyMessage('Link copied to clipboard');
+      showCopyMessage(successMsg);
     } else {
-      showCopyMessage('Copy failed. Please copy the URL from the address bar.');
+      showCopyMessage('Copy failed. Please try again.');
     }
   } catch (err) {
-    showCopyMessage('Copy failed. Please copy the URL from the address bar.');
+    showCopyMessage('Copy failed. Please try again.');
   }
+}
+
+function copyInput() {
+  const content = $("#frame1").val();
+  copyToClipboard(content, 'Input copied to clipboard!');
+  return false;
+}
+
+function copyResults() {
+  const content = formatResultsWithPrefix();
+  copyToClipboard(content, 'Results copied to clipboard!');
+  return false;
+}
+
+function copyURLtoClipboard() {
+  const url = window.location.href;
+  copyToClipboard(url, 'Link copied to clipboard!');
+  return false;
 }
 
 function showCopyMessage(message) {
