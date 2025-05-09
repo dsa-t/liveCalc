@@ -22,8 +22,8 @@ function initializeApp(defaultPrecision) {
   extendMathJsWithBaseConversions();
   
   const hashvalue = window.location.hash.substring(1);
-  if (hashvalue.length > 4) {
-    $('#frame1').val(b64_to_utf8(hashvalue));
+  if (hashvalue.length >= 4) {
+    $('#frame1').val(decodeDataFromURL(hashvalue));
   } else {
     const lastInput = localStorage.getItem('liveCalcLastInput');
     if (lastInput) {
@@ -37,7 +37,7 @@ function initializeApp(defaultPrecision) {
     if (!$(this).data('typing')) {
       $(this).data('typing', true);
       setTimeout(() => {
-        const encodedMath = utf8_to_b64($('#frame1').val());
+        const encodedMath = encodeDataForURL($('#frame1').val());
         window.location.hash = encodedMath;
         localStorage.setItem('liveCalcLastInput', $('#frame1').val());
         $(this).data('typing', false);
@@ -236,6 +236,40 @@ function b64_to_utf8(str) {
   return decodeURIComponent(escape(window.atob(str)));
 }
 
+function compressData(str) {
+  return LZString.compressToBase64(str);
+}
+
+function decompressData(str) {  
+  try {
+    // First try to decompress as LZString compressed content
+    const decompressed = LZString.decompressFromBase64(str);
+    // If result is not null and has length, it was successfully decompressed
+    if (decompressed !== null && decompressed.length > 0) {
+      return decompressed;
+    }
+  } catch (e) {
+    // If decompression fails, continue to try b64 decoding
+    console.log("LZ decompression failed, trying base64", e);
+  }
+  
+  // Fall back to regular base64 decoding
+  try {
+    return b64_to_utf8(str);
+  } catch (e) {
+    console.error("Failed to decode base64 data:", e);
+    return str;
+  }
+}
+
+function encodeDataForURL(str) {
+  return compressData(str);
+}
+
+function decodeDataFromURL(str) {
+  return decompressData(str);
+}
+
 function evalMath() {
   const parser = math.parser();
   let output = '';
@@ -399,7 +433,7 @@ function clearTextarea() {
 }
 
 function insertExample() {
-  $('#frame1').val(b64_to_utf8('QSA9ICgxLjIgLyAoMy4zICsgMS43KSkgY20KQiA9IDUuMDggY20gKyAyLjUgaW5jaApDID0gQiAqIEIgKiBBIGluIGNtMwoKCg=='));
+  $('#frame1').val(decodeDataFromURL('QSA9ICgxLjIgLyAoMy4zICsgMS43KSkgY20KQiA9IDUuMDggY20gKyAyLjUgaW5jaApDID0gQiAqIEIgKiBBIGluIGNtMwoKCg=='));
   evalMath();
 }
 
