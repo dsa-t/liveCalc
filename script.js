@@ -1,19 +1,22 @@
 document.addEventListener('DOMContentLoaded', function() {
-  loadSettings();
+  const DEFAULT_PRECISION = 20;
+  loadSettings(DEFAULT_PRECISION);
 
-  initializeApp();
-  initializeModal();
+  initializeApp(DEFAULT_PRECISION);
+  initializeModal(DEFAULT_PRECISION);
   initializeDarkMode();
 
   evalMath();
 }, false);
 
-function initializeApp() {
+function initializeApp(defaultPrecision) {
+  const precision = parseInt(localStorage.getItem('precision')) || defaultPrecision;
+  
   math.config({
     number: 'BigNumber',
-    precision: 64,
-    relTol: 1e-60,
-    absTol: 1e-63,
+    precision: precision,
+    relTol: Math.pow(10, -(precision - 4)),
+    absTol: Math.pow(10, -(precision - 1)),
   });
 
   extendMathJsWithBaseConversions();
@@ -47,18 +50,18 @@ function initializeApp() {
   });
 }
 
-function initializeModal() {
+function initializeModal(defaultPrecision) {
   const modal = document.getElementById("settingsModal");
   const closeBtn = modal.querySelector(".close");
   
   closeBtn.onclick = function() {
-    saveSettings();
+    saveSettings(defaultPrecision);
     modal.style.display = "none";
   }
   
   window.onclick = function(event) {
     if (event.target == modal) {
-      saveSettings();
+      saveSettings(defaultPrecision);
       modal.style.display = "none";
     }
   }
@@ -76,6 +79,13 @@ function initializeModal() {
   
   $('#useSpaces').on('change', function() {
     localStorage.setItem('useSpaces', $(this).is(':checked'));
+    evalMath();
+  });
+  
+  $('#precision').on('change', function() {
+    const precision = parseInt($(this).val()) || defaultPrecision;
+    localStorage.setItem('precision', precision);
+    updatePrecisionConfig(precision);
     evalMath();
   });
 }
@@ -106,7 +116,7 @@ function openSettings() {
   modal.style.display = "block";
 }
 
-function loadSettings() {
+function loadSettings(defaultPrecision) {
   const showErrorsState = localStorage.getItem('showErrors');
   const showErrors = showErrorsState !== null ? showErrorsState === 'true' : true;
   $('#showErrors').prop('checked', showErrors);
@@ -119,16 +129,35 @@ function loadSettings() {
   const alignmentState = localStorage.getItem('useSpaces');
   const useSpaces = alignmentState !== null ? alignmentState === 'true' : false;
   $('#useSpaces').prop('checked', useSpaces);
+  
+  const precisionState = localStorage.getItem('precision');
+  const precision = precisionState !== null ? parseInt(precisionState) : defaultPrecision;
+  $('#precision').val(precision);
 }
 
-function saveSettings() {
+function saveSettings(defaultPrecision) {
   const showErrors = $('#showErrors').is(':checked');
   const darkMode = $('#darkMode').is(':checked');
   const useSpaces = $('#useSpaces').is(':checked');
+  const precision = parseInt($('#precision').val()) || defaultPrecision;
   
   localStorage.setItem('showErrors', showErrors);
   localStorage.setItem('darkMode', darkMode);
   localStorage.setItem('useSpaces', useSpaces);
+  localStorage.setItem('precision', precision);
+  
+  // Update math precision config when settings are saved
+  updatePrecisionConfig(precision);
+  evalMath();
+}
+
+function updatePrecisionConfig(precision) {
+  math.config({
+    number: 'BigNumber',
+    precision: precision,
+    relTol: Math.pow(10, -(precision - 4)),
+    absTol: Math.pow(10, -(precision - 1)),
+  });
 }
 
 function extendMathJsWithBaseConversions() {
