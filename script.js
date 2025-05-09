@@ -1,4 +1,4 @@
-const DEFAULT_PRECISION = 20;
+const DEFAULT_PRECISION = 18;
 
 document.addEventListener('DOMContentLoaded', function() {
   loadSettings();
