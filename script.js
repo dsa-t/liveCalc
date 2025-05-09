@@ -1,4 +1,5 @@
 const DEFAULT_PRECISION = 18;
+const EXAMPLE_DATA = 'IYAgvCCMBMDMAsAoUBLAdiAFgUwB7JHRACN1FEAGYyG2mkAd2ABdmBnc6AVgopAHUQAKihZCGANb9MiSHyky2AVwC25SCDVdNa5WsTQVwkNAlrIRgPQhtK/QEFwIABSQAdNBDXnsN7BAA1FBuAOwAlGEgAMZqAEJOXG4UABzRRkHQbtroUTIAwk7xIkUgjkQxsOQAZk7QFACyABIAXrKWNURoHIhAA==';
 
 document.addEventListener('DOMContentLoaded', function() {
   loadSettings();
@@ -6,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeModal();
   initializeDarkMode();
 
-  evalMath();
+  updateMath();
 }, false);
 
 function initializeApp() {
@@ -28,12 +29,14 @@ function initializeApp() {
     const lastInput = localStorage.getItem('liveCalcLastInput');
     if (lastInput) {
       $('#frame1').val(lastInput);
+    } else {
+      $('#frame1').val(decodeDataFromURL(EXAMPLE_DATA));
     }
   }
-  evalMath();
+  updateMath();
 
-  $('#frame1').on('keyup input change', function() {
-    evalMath();
+  $('#frame1').on('input change', function() {
+    updateMath();
     if (!$(this).data('typing')) {
       $(this).data('typing', true);
       setTimeout(() => {
@@ -68,7 +71,7 @@ function initializeModal() {
   
   $('#showErrors').on('change', function() {
     localStorage.setItem('showErrors', $(this).is(':checked'));
-    evalMath();
+    updateMath();
   });
   
   $('#darkMode').on('change', function() {
@@ -79,14 +82,14 @@ function initializeModal() {
   
   $('#alignToMaxLength').on('change', function() {
     localStorage.setItem('alignToMaxLength', $(this).is(':checked'));
-    evalMath();
+    updateMath();
   });
   
   $('#precision').on('change', function() {
     const precision = parseInt($(this).val()) || DEFAULT_PRECISION;
     localStorage.setItem('precision', precision);
     updatePrecisionConfig(precision);
-    evalMath();
+    updateMath();
   });
 }
 
@@ -118,7 +121,7 @@ function openSettings() {
 
 function loadSettings() {
   const showErrorsState = localStorage.getItem('showErrors');
-  const showErrors = showErrorsState !== null ? showErrorsState === 'true' : true;
+  const showErrors = showErrorsState !== null ? showErrorsState === 'true' : false;
   $('#showErrors').prop('checked', showErrors);
   
   const darkModeState = localStorage.getItem('darkMode');
@@ -148,7 +151,7 @@ function saveSettings() {
   localStorage.setItem('precision', precision);
   
   updatePrecisionConfig(precision);
-  evalMath();
+  updateMath();
 }
 
 function updatePrecisionConfig(precision) {
@@ -245,7 +248,7 @@ function decompressData(str) {
     // First try to decompress as LZString compressed content
     const decompressed = LZString.decompressFromBase64(str);
     // If result is not null and has length, it was successfully decompressed
-    if (decompressed !== null && decompressed.length > 0) {
+    if (decompressed !== null) {
       return decompressed;
     }
   } catch (e) {
@@ -270,7 +273,7 @@ function decodeDataFromURL(str) {
   return decompressData(str);
 }
 
-function evalMath() {
+function evalInput(customFormatter = {}){
   const parser = math.parser();
   let output = '';
   let input = [];
@@ -278,45 +281,64 @@ function evalMath() {
   
   const showErrors = localStorage.getItem('showErrors') !== 'false';
   const alignToMaxLength = localStorage.getItem('alignToMaxLength') === 'true';
-
+  
+  // Calculate max length for alignment once
+  const arrayOfLines = formulas.split('\n');
+  const maxLen = Math.max(...arrayOfLines.map(item => item.length));
+  
+  // Default formatters with spacing calculation built-in
+  const defaultFormatters = {
+    calculateSpacing: (item) => {
+      if (alignToMaxLength) {
+        const spacesNeeded = Math.max(1, maxLen - item.length + 2);
+        return ' '.repeat(spacesNeeded);
+      } else {
+        return '\t';
+      }
+    },
+    lineResult: (item, result, alignToMaxLength, maxLen) => {
+      const spacing = defaultFormatters.calculateSpacing(item);
+      return `${item}${spacing}${result}\n`;
+    },
+    sumLine: (item, displaySum, alignToMaxLength, maxLen) => {
+      const spacing = defaultFormatters.calculateSpacing(item);
+      return `${item}${spacing}<span class="sum-value">${displaySum}</span>\n`;
+    },
+    errorLine: (item, errorMessage) => `${item} <span class="error-text">&lt;${errorMessage}&gt;</span>\n`,
+    emptyLine: (item) => `${item}\n`
+  };
+  
+  // Merge with provided formatters
+  const formatters = { ...defaultFormatters, ...customFormatter };
+  
   if (formulas.includes(",") && !formulas.includes(".")) {
     formulas = formulas.replace(/(\d+),(\d+)/gi, "$1.$2");
   }
 
-  const arrayOfLines = formulas.split('\n');
   let globalSum = math.bignumber(0);
   let localSum = math.bignumber(0);
   let units = null;
-  const maxLen = Math.max(...arrayOfLines.map(item => item.length));
 
   arrayOfLines.forEach(item => {
     if (containsSumKeyword(item)) {
       const displaySum = units ? new math.Unit(localSum, units).simplify() : localSum.toString();
-      
-      if (alignToMaxLength) {
-        const spacesNeeded = Math.max(1, maxLen - item.length + 2);
-        const spacing = ' '.repeat(spacesNeeded);
-        output += `${item}${spacing}<span class="sum-value">${displaySum}</span>\n`;
-      } else {
-        output += `${item}\t<span class="sum-value">${displaySum}</span>\n`;
-      }
-      
+      output += formatters.sumLine(item, displaySum, alignToMaxLength, maxLen);
       localSum = math.bignumber(0);
     } else {
       try {
         parser.evaluate(item);
       } catch (err) {
         if (showErrors) {
-          output += `${item} <span class="error-text">&lt;${err.message}&gt;</span>\n`;
+          output += formatters.errorLine(item, err.message);
         } else {
-          output += `${item}\n`;
+          output += formatters.emptyLine(item);
         }
         console.error(`Error evaluating item: "${item}": ${err.message}`);
         return;
       }
 
       input.push(item);
-      const evaluationResult = evaluateItem(parser, input, item, maxLen, alignToMaxLength);
+      const evaluationResult = evaluateItem(parser, input, item, alignToMaxLength, maxLen, formatters);
       output += evaluationResult;
 
       const lastResult = getLastResult(parser, input);
@@ -332,7 +354,7 @@ function evalMath() {
           globalSum = obj.globalSum;
           units = obj.units;
         } catch (err) {
-          output += `${item} <span class="error-text">&lt;${err.message}&gt;</span>\n`;
+          output += formatters.errorLine(item, err.message);
           console.error(`Error updating sum for item: ${item}`, err);
           return;
         }
@@ -340,6 +362,11 @@ function evalMath() {
     }
   });
 
+  return output;
+}
+
+function updateMath() {
+  let output = evalInput();
   $("#highlights1").html(output);
 }
 
@@ -386,55 +413,57 @@ function updateSum(obj, lastResult) {
   }
 }
 
-function evaluateItem(parser, input, item, maxLen, alignToMaxLength) {
+function evaluateItem(parser, input, item, alignToMaxLength, maxLen, formatters = {}) {
+  // Default formatters in case they're not provided
+  const defaultFormatters = {
+    calculateSpacing: (item) => {
+      if (alignToMaxLength) {
+        const spacesNeeded = Math.max(1, maxLen - item.length + 2);
+        return ' '.repeat(spacesNeeded);
+      } else {
+        return '\t';
+      }
+    },
+    lineResult: (item, result, alignToMaxLength, maxLen) => {
+      const spacing = defaultFormatters.calculateSpacing(item);
+      return `${item}${spacing}${result}\n`;
+    },
+    emptyLine: (item) => `${item}\n`
+  };
+
+  // Use provided formatters or fall back to defaults
+  const fmt = { ...defaultFormatters, ...formatters };
+
   if (item.trim() === '') {
-    return `${item}\n`;
+    return fmt.emptyLine(item);
   }
   
   const result = parser.evaluate(input);
   if (result === undefined) {
-    return `${item}\n`;
+    return fmt.emptyLine(item);
   }
   
   const ev_raw = result.slice(-1);
   const ev_str = JSON.stringify(ev_raw);
   
   if (ev_raw === undefined || ev_str === "[null]") {
-    return `${item}\n`;
-  } 
-
-  let spacing;
-  
-  if (alignToMaxLength) {
-    const spacesNeeded = Math.max(1, maxLen - item.length + 2);
-    spacing = ' '.repeat(spacesNeeded);
-  } else {
-    spacing = '\t';
+    return fmt.emptyLine(item);
   }
   
-  const baseMatch = item.match(/\bto\s+(hex|bin|oct|dec)\b/i);
-  
-  if (baseMatch && typeof ev_raw[0] !== 'undefined') {
-    const base = baseMatch[1].toLowerCase();
-    try {
-      const convertedValue = math.evaluate(`to_${base}(${ev_raw})`);
-      return `${item}${spacing} = ${convertedValue}\n`;
-    } catch (e) {
-      console.error(`Base conversion error: ${e.message}`);
-    }
-  }
-  
-  return `${item}${spacing}${ev_raw}\n`;
+  return fmt.lineResult(item, ev_raw, alignToMaxLength, maxLen);
 }
 
 function clearTextarea() {
-  $('#frame1').val('');
-  evalMath();
-}
-
-function insertExample() {
-  $('#frame1').val(decodeDataFromURL('QSA9ICgxLjIgLyAoMy4zICsgMS43KSkgY20KQiA9IDUuMDggY20gKyAyLjUgaW5jaApDID0gQiAqIEIgKiBBIGluIGNtMwoKCg=='));
-  evalMath();
+  const textareaElement = document.getElementById('frame1');
+  
+  textareaElement.focus();
+  textareaElement.select();
+  document.execCommand('delete', false);
+  
+  textareaElement.selectionStart = 0;
+  textareaElement.selectionEnd = 0;
+  
+  updateMath();
 }
 
 function download(filename, text) {
@@ -474,35 +503,9 @@ function downloadResults() {
   const dateTime = getFormattedDateTime();
   const filename = `liveCalc_results_${dateTime}.txt`;
   
-  const content = formatResultsWithPrefix();
+  const content = exportFormatResults();
   download(filename, content);
   return false;
-}
-
-function downloadMath() {
-  return downloadResults();
-}
-
-function formatResultsWithPrefix() {
-  // Get the user's alignment preference from localStorage
-  const alignToMaxLength = localStorage.getItem('alignToMaxLength') === 'true';
-  
-  // Format content and add # prefix to results lines
-  return $("#highlights1").text().split('\n').map(line => {
-    // Use different splitting logic based on user's preference
-    const parts = alignToMaxLength ? line.split(/\s{2,}/) : line.split(/\t/);
-    
-    if (parts.length > 1) {
-      // It's a line with results
-      const input = parts[0];
-      const result = parts.slice(1).join(' ').trim();
-      if (result) {
-        // Format the output based on user's preference
-        return input + (alignToMaxLength ? '  ' : '\t') + '# ' + result;
-      }
-    }
-    return line;
-  }).join('\n');
 }
 
 function copyToClipboard(text, successMsg = 'Copied to clipboard!') {
@@ -559,7 +562,7 @@ function copyInput() {
 }
 
 function copyResults() {
-  const content = formatResultsWithPrefix();
+  const content = exportFormatResults();
   copyToClipboard(content, 'Results copied to clipboard!');
   return false;
 }
@@ -596,4 +599,28 @@ function showCopyMessage(message) {
   setTimeout(() => {
     messageElement.style.display = 'none';
   }, 2000);
+}
+
+function exportFormatResults() {
+  // Define export-specific formatters that add # prefix to results
+  const exportFormatters = {
+    lineResult: (item, result, alignToMaxLength, maxLen) => {
+      const spacing = alignToMaxLength ? 
+        ' '.repeat(Math.max(1, maxLen - item.length + 2)) : 
+        '\t';
+      return `${item}${spacing}# ${result}\n`;
+    },
+    sumLine: (item, displaySum, alignToMaxLength, maxLen) => {
+      const spacing = alignToMaxLength ? 
+        ' '.repeat(Math.max(1, maxLen - item.length + 2)) : 
+        '\t';
+      return `${item}${spacing}# ${displaySum}\n`;
+    },
+    // Error and empty lines remain unchanged
+    errorLine: (item, errorMessage) => `${item}\n`,
+    emptyLine: (item) => `${item}\n`
+  };
+  
+  // Use evalInput with our custom formatters
+  return evalInput(exportFormatters);
 }
