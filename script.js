@@ -1,7 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
+  loadSettings();
+
   initializeApp();
   initializeModal();
   initializeDarkMode();
+
+  evalMath();
 }, false);
 
 function initializeApp() {
@@ -14,17 +18,10 @@ function initializeApp() {
 
   extendMathJsWithBaseConversions();
   
-  // Load settings from localStorage
-  const showErrorsState = localStorage.getItem('showErrors');
-  if (showErrorsState !== null) {
-    $('#showErrors').prop('checked', showErrorsState === 'true');
-  }
-  
   const hashvalue = window.location.hash.substring(1);
   if (hashvalue.length > 4) {
     $('#frame1').val(b64_to_utf8(hashvalue));
   } else {
-    // If no hash value, try to restore from localStorage
     const lastInput = localStorage.getItem('liveCalcLastInput');
     if (lastInput) {
       $('#frame1').val(lastInput);
@@ -32,40 +29,33 @@ function initializeApp() {
   }
   evalMath();
 
-  // Direct evaluation with multiple events to catch all typing scenarios
   $('#frame1').on('keyup input change', function() {
     evalMath();
-    // Only update hash when needed, not on every keypress
     if (!$(this).data('typing')) {
       $(this).data('typing', true);
       setTimeout(() => {
         const encodedMath = utf8_to_b64($('#frame1').val());
         window.location.hash = encodedMath;
-        // Save current input to localStorage
         localStorage.setItem('liveCalcLastInput', $('#frame1').val());
         $(this).data('typing', false);
-      }, 1000); // Only update URL hash once per second
+      }, 1000);
     }
   });
 
-  // Improved scroll sync - this handles the horizontal scrolling properly
   $('#frame1').on('scroll', function() {
     $('.bed-highlights').css('transform', `translate(${-this.scrollLeft}px, ${-this.scrollTop}px)`);
   });
 }
 
-// Initialize the settings modal
 function initializeModal() {
   const modal = document.getElementById("settingsModal");
   const closeBtn = modal.querySelector(".close");
   
-  // Close the modal when clicking the X button and save settings
   closeBtn.onclick = function() {
     saveSettings();
     modal.style.display = "none";
   }
   
-  // Close the modal when clicking outside of it and save settings
   window.onclick = function(event) {
     if (event.target == modal) {
       saveSettings();
@@ -73,37 +63,29 @@ function initializeModal() {
     }
   }
   
-  // Update show errors setting when checkbox changes
   $('#showErrors').on('change', function() {
     localStorage.setItem('showErrors', $(this).is(':checked'));
     evalMath();
   });
   
-  // Update dark mode setting when checkbox changes
   $('#darkMode').on('change', function() {
     const isDarkMode = $(this).is(':checked');
     localStorage.setItem('darkMode', isDarkMode);
     applyDarkMode(isDarkMode);
   });
+  
+  $('#useSpaces').on('change', function() {
+    localStorage.setItem('useSpaces', $(this).is(':checked'));
+    evalMath();
+  });
 }
 
-// Initialize dark mode based on saved preference
 function initializeDarkMode() {
-  const darkModeState = localStorage.getItem('darkMode');
-  const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const darkMode = localStorage.getItem('darkMode') === 'true';
+  applyDarkMode(darkMode);
   
-  // Set checkbox based on saved preference or system preference
-  const shouldEnableDarkMode = darkModeState !== null 
-    ? darkModeState === 'true' 
-    : prefersDarkScheme;
-    
-  $('#darkMode').prop('checked', shouldEnableDarkMode);
-  applyDarkMode(shouldEnableDarkMode);
-  
-  // Listen for system preference changes
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
     if (localStorage.getItem('darkMode') === null) {
-      // Only auto-switch if user hasn't set a preference
       const newDarkModeState = e.matches;
       $('#darkMode').prop('checked', newDarkModeState);
       applyDarkMode(newDarkModeState);
@@ -111,7 +93,6 @@ function initializeDarkMode() {
   });
 }
 
-// Apply dark mode to the document
 function applyDarkMode(isDarkMode) {
   if (isDarkMode) {
     document.body.classList.add('dark-mode');
@@ -120,25 +101,37 @@ function applyDarkMode(isDarkMode) {
   }
 }
 
-// Open the settings modal
 function openSettings() {
   const modal = document.getElementById("settingsModal");
   modal.style.display = "block";
 }
 
-// Save settings to localStorage
-function saveSettings() {
-  localStorage.setItem('showErrors', $('#showErrors').is(':checked'));
-  localStorage.setItem('darkMode', $('#darkMode').is(':checked'));
-  applyDarkMode($('#darkMode').is(':checked'));
-  evalMath();
+function loadSettings() {
+  const showErrorsState = localStorage.getItem('showErrors');
+  const showErrors = showErrorsState !== null ? showErrorsState === 'true' : true;
+  $('#showErrors').prop('checked', showErrors);
+  
+  const darkModeState = localStorage.getItem('darkMode');
+  const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const darkMode = darkModeState !== null ? darkModeState === 'true' : prefersDarkScheme;
+  $('#darkMode').prop('checked', darkMode);
+  
+  const alignmentState = localStorage.getItem('useSpaces');
+  const useSpaces = alignmentState !== null ? alignmentState === 'true' : false;
+  $('#useSpaces').prop('checked', useSpaces);
 }
 
-/**
- * Extends math.js with custom functions for base conversions
- */
+function saveSettings() {
+  const showErrors = $('#showErrors').is(':checked');
+  const darkMode = $('#darkMode').is(':checked');
+  const useSpaces = $('#useSpaces').is(':checked');
+  
+  localStorage.setItem('showErrors', showErrors);
+  localStorage.setItem('darkMode', darkMode);
+  localStorage.setItem('useSpaces', useSpaces);
+}
+
 function extendMathJsWithBaseConversions() {
-  // Define base conversion configurations
   const baseConfigs = {
     hex: { base: 16, prefix: '0x' },
     bin: { base: 2, prefix: '0b' },
@@ -146,18 +139,14 @@ function extendMathJsWithBaseConversions() {
     dec: { base: 10, prefix: '' }
   };
   
-  // Create conversion functions dynamically
   const conversions = {};
   
-  // Create to_base functions
   Object.keys(baseConfigs).forEach(baseType => {
     conversions[`to_${baseType}`] = function(value) {
-      // Check if it's a unit
       if (math.typeOf(value) === 'Unit') {
         throw new Error('Must be unitless');
       }
       
-      // For non-decimal bases, check for floating point
       if (baseType !== 'dec' && (!Number.isInteger(Number(value)))) {
         throw new Error(`Can't convert fractional numbers to ${baseType}`);
       }
@@ -170,9 +159,8 @@ function extendMathJsWithBaseConversions() {
     };
   });
   
-  // Create from_base functions (except dec which is handled by default)
   Object.keys(baseConfigs).forEach(baseType => {
-    if (baseType === 'dec') return; // Skip dec as it's the default
+    if (baseType === 'dec') return;
     const config = baseConfigs[baseType];
     conversions[`from_${baseType}`] = function(value) {
       if (typeof value === 'string') {
@@ -182,33 +170,27 @@ function extendMathJsWithBaseConversions() {
     };
   });
   
-  // Import all conversion functions
   math.import(conversions);
   
-  // Override math.parse to handle base conversion expressions
   const originalParse = math.parse;
   math.parse = function(expr) {
     if (typeof expr === 'string') {
-      // Process base literals
       Object.keys(baseConfigs).forEach(baseType => {
-        if (baseType === 'dec') return; // Skip dec as it has no prefix
+        if (baseType === 'dec') return;
         const config = baseConfigs[baseType];
         const regex = new RegExp(`${config.prefix}([0-9a-fA-F]+)`, 'g');
         expr = expr.replace(regex, `from_${baseType}("$1")`);
       });
       
-      // Process natural language expressions
       const conversionKeywords = ['in', 'to'];
       conversionKeywords.forEach(keyword => {
         Object.keys(baseConfigs).forEach(baseType => {
-          // Match the entire expression before the conversion keyword
           const pattern = new RegExp(`(.+?)\\s+${keyword}\\s+${baseType}(?:\\b|$)`, 'gi');
           expr = expr.replace(pattern, (match, group) => {
-            // Check for balanced parentheses in the group
             if (group.trim()) {
               return `to_${baseType}(${group})`;
             }
-            return match; // If no group captured, return the original match
+            return match;
           });
         });
       });
@@ -230,7 +212,9 @@ function evalMath() {
   let output = '';
   let input = [];
   let formulas = $('#frame1').val();
-  const showErrors = $('#showErrors').is(':checked');
+  
+  const showErrors = localStorage.getItem('showErrors') !== 'false';
+  const useSpaces = localStorage.getItem('useSpaces') === 'true';
 
   if (formulas.includes(",") && !formulas.includes(".")) {
     formulas = formulas.replace(/(\d+),(\d+)/gi, "$1.$2");
@@ -245,8 +229,16 @@ function evalMath() {
   arrayOfLines.forEach(item => {
     if (containsSumKeyword(item)) {
       const displaySum = units ? new math.Unit(localSum, units).simplify() : localSum.toString();
-      output += `${item}\t<span class="sum-value">${displaySum}</span>\n`;
-      localSum = math.bignumber(0); // Reset local sum after each Summe keyword
+      
+      if (useSpaces) {
+        const spacesNeeded = Math.max(1, maxLen - item.length + 2);
+        const spacing = ' '.repeat(spacesNeeded);
+        output += `${item}${spacing}<span class="sum-value">${displaySum}</span>\n`;
+      } else {
+        output += `${item}\t<span class="sum-value">${displaySum}</span>\n`;
+      }
+      
+      localSum = math.bignumber(0);
     } else {
       try {
         parser.evaluate(item);
@@ -261,7 +253,7 @@ function evalMath() {
       }
 
       input.push(item);
-      const evaluationResult = evaluateItem(parser, input, item, maxLen);
+      const evaluationResult = evaluateItem(parser, input, item, maxLen, useSpaces);
       output += evaluationResult;
 
       const lastResult = getLastResult(parser, input);
@@ -288,7 +280,6 @@ function evalMath() {
   $("#highlights1").html(output);
 }
 
-// Rest of the functions remain the same
 function containsSumKeyword(item) {
   const keywords = ['total', 'sum', 'summe', 'gesamt'];
   return keywords.some(keyword => item.toLowerCase().includes(keyword));
@@ -307,11 +298,9 @@ function updateSum(obj, lastResult) {
     const lastResultSI = lastResult.toSI();
     const valueSI = lastResultSI.toNumeric();
     
-    // Make it valueless
     unitSI = lastResultSI;
     unitSI.value = null;
-    5
-    // If units change, reset both sums
+    
     if (obj.units === null || !unitSI.equalBase(obj.units)) {
       obj.localSum = valueSI;
       obj.globalSum = valueSI;
@@ -323,7 +312,6 @@ function updateSum(obj, lastResult) {
     obj.globalSum = obj.globalSum.add(valueSI);
     obj.units = unitSI;
   } else if (typeof lastResult === 'number' || math.typeOf(lastResult) === 'BigNumber') {
-    // If we had units before but now we don't, reset sums
     if (obj.units !== null) {
       obj.localSum = math.bignumber(lastResult);
       obj.globalSum = math.bignumber(lastResult);
@@ -335,7 +323,7 @@ function updateSum(obj, lastResult) {
   }
 }
 
-function evaluateItem(parser, input, item, maxLen) {
+function evaluateItem(parser, input, item, maxLen, useSpaces) {
   if (item.trim() === '') {
     return `${item}\n`;
   }
@@ -352,16 +340,20 @@ function evaluateItem(parser, input, item, maxLen) {
     return `${item}\n`;
   } 
 
-  const spacing = "\t";
+  let spacing;
   
-  // Check if the expression has a base conversion pattern like "to hex", "to bin", etc.
+  if (useSpaces) {
+    const spacesNeeded = Math.max(1, maxLen - item.length + 2);
+    spacing = ' '.repeat(spacesNeeded);
+  } else {
+    spacing = '\t';
+  }
+  
   const baseMatch = item.match(/\bto\s+(hex|bin|oct|dec)\b/i);
   
   if (baseMatch && typeof ev_raw[0] !== 'undefined') {
     const base = baseMatch[1].toLowerCase();
-    // Use the existing conversion functions instead of duplicating logic
     try {
-      // Use the to_base function we already defined in extendMathJsWithBaseConversions
       const convertedValue = math.evaluate(`to_${base}(${ev_raw})`);
       return `${item}${spacing} = ${convertedValue}\n`;
     } catch (e) {
