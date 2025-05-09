@@ -73,7 +73,11 @@
         </div>
         <div class="setting-item">
           <label class="setting-label">Precision: 
-            <input type="number" id="precision" min="1" max="64" style="width: 60px; margin-left: 5px;"> 
+            <div class="precision-control">
+              <input type="number" id="precision" min="1" max="64"> 
+              <button class="precision-btn" id="decrease-precision">-</button>
+              <button class="precision-btn" id="increase-precision">+</button>
+            </div>
           </label>
         </div>
       </div>

@@ -91,6 +91,25 @@ function initializeModal() {
     updatePrecisionConfig(precision);
     updateMath();
   });
+
+  // Initialize precision control buttons
+  $('#increase-precision').on('click', function() {
+    const currentPrecision = parseInt($('#precision').val()) || DEFAULT_PRECISION;
+    const newPrecision = Math.min(64, currentPrecision + 1); // Max value is 64
+    $('#precision').val(newPrecision);
+    localStorage.setItem('precision', newPrecision);
+    updatePrecisionConfig(newPrecision);
+    updateMath();
+  });
+  
+  $('#decrease-precision').on('click', function() {
+    const currentPrecision = parseInt($('#precision').val()) || DEFAULT_PRECISION;
+    const newPrecision = Math.max(1, currentPrecision - 1); // Min value is 1
+    $('#precision').val(newPrecision);
+    localStorage.setItem('precision', newPrecision);
+    updatePrecisionConfig(newPrecision);
+    updateMath();
+  });
 }
 
 function initializeDarkMode() {

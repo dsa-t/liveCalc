@@ -247,7 +247,9 @@ body.dark-mode .dropdown-content a:hover {
 .setting-label {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   cursor: pointer;
+  gap: 5px;
 }
 
 .setting-label input[type="checkbox"] {
@@ -334,4 +336,96 @@ body.dark-mode .close:focus {
 
 body.dark-mode .sum-value {
   color: #4db8ff;
+}
+
+/* Precision Control Styles */
+.precision-control {
+  display: flex;
+  align-items: center;
+  margin-left: 5px;
+  gap: 5px;
+}
+
+.precision-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 1.2em;
+  font-weight: bold;
+  background-color: #e9e9e9;
+  border: 1px solid #ccc;
+  border-radius: 4px; /* Changed from 50% to 4px for square shape */
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.precision-btn:hover {
+  background-color: #d5d5d5;
+  transform: scale(1.05);
+}
+
+.precision-btn:active {
+  background-color: #c5c5c5;
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+#precision {
+  width: 50px;
+  height: 30px;
+  text-align: center;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 400px) {
+  .precision-control {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  #precision {
+    flex: 0 0 60px;
+    min-width: 60px;
+  }
+  
+  .precision-btn {
+    min-width: 40px;
+    min-height: 40px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Dark mode for precision controls */
+body.dark-mode .precision-btn {
+  background-color: #444;
+  color: #e0e0e0;
+  border-color: #555;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .precision-btn:hover {
+  background-color: #555;
+}
+
+body.dark-mode .precision-btn:active {
+  background-color: #666;
+}
+
+body.dark-mode #precision {
+  background-color: #333;
+  color: #e0e0e0;
+  border-color: #555;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
