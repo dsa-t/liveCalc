@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
   math.config({
     number: 'BigNumber',
-    precision: 64
+    precision: 64,
+    relTol: 1e-60,
+    absTol: 1e-63,
   });
 
   extendMathJsWithBaseConversions();
