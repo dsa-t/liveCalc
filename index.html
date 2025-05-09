@@ -22,7 +22,7 @@
       <!-- <a href="#" class="btn control" onclick="insertExample(); return false;">Example</a> -->
       <a href="#" class="btn control" onclick="downloadMath(); return false;">Save</a>
       <a href="#" class="btn control" onclick="copyURLtoClipboard(); return false;">Copy Link</a>
-      <label class="toggle control"><input type="checkbox" id="showErrors"> Errors</label>
+      <a href="#" class="btn control" id="settingsBtn" onclick="openSettings(); return false;">Settings</a>
     </div>
   </div>
   <div class="content">
@@ -32,6 +32,30 @@
           <div class="bed-highlights bed-content linked" id="highlights1"></div>
         </div>
         <textarea spellcheck="false" class="bed-input bed-content linked ta" name="frame1" id="frame1"></textarea>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="showErrors"> 
+            Show Errors
+          </label>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="darkMode"> 
+            Dark Mode
+          </label>
+        </div>
       </div>
     </div>
   </div>

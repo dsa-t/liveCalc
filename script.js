@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   initializeApp();
+  initializeModal();
+  initializeDarkMode();
 }, false);
 
 function initializeApp() {
@@ -12,6 +14,7 @@ function initializeApp() {
 
   extendMathJsWithBaseConversions();
   
+  // Load settings from localStorage
   const showErrorsState = localStorage.getItem('showErrors');
   if (showErrorsState !== null) {
     $('#showErrors').prop('checked', showErrorsState === 'true');
@@ -45,16 +48,90 @@ function initializeApp() {
     }
   });
 
-  // Save checkbox state to localStorage when changed
-  $('#showErrors').on('change', function() {
-    localStorage.setItem('showErrors', $(this).is(':checked'));
-    evalMath();
-  });
-
   // Improved scroll sync - this handles the horizontal scrolling properly
   $('#frame1').on('scroll', function() {
     $('.bed-highlights').css('transform', `translate(${-this.scrollLeft}px, ${-this.scrollTop}px)`);
   });
+}
+
+// Initialize the settings modal
+function initializeModal() {
+  const modal = document.getElementById("settingsModal");
+  const closeBtn = modal.querySelector(".close");
+  
+  // Close the modal when clicking the X button and save settings
+  closeBtn.onclick = function() {
+    saveSettings();
+    modal.style.display = "none";
+  }
+  
+  // Close the modal when clicking outside of it and save settings
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      saveSettings();
+      modal.style.display = "none";
+    }
+  }
+  
+  // Update show errors setting when checkbox changes
+  $('#showErrors').on('change', function() {
+    localStorage.setItem('showErrors', $(this).is(':checked'));
+    evalMath();
+  });
+  
+  // Update dark mode setting when checkbox changes
+  $('#darkMode').on('change', function() {
+    const isDarkMode = $(this).is(':checked');
+    localStorage.setItem('darkMode', isDarkMode);
+    applyDarkMode(isDarkMode);
+  });
+}
+
+// Initialize dark mode based on saved preference
+function initializeDarkMode() {
+  const darkModeState = localStorage.getItem('darkMode');
+  const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  // Set checkbox based on saved preference or system preference
+  const shouldEnableDarkMode = darkModeState !== null 
+    ? darkModeState === 'true' 
+    : prefersDarkScheme;
+    
+  $('#darkMode').prop('checked', shouldEnableDarkMode);
+  applyDarkMode(shouldEnableDarkMode);
+  
+  // Listen for system preference changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (localStorage.getItem('darkMode') === null) {
+      // Only auto-switch if user hasn't set a preference
+      const newDarkModeState = e.matches;
+      $('#darkMode').prop('checked', newDarkModeState);
+      applyDarkMode(newDarkModeState);
+    }
+  });
+}
+
+// Apply dark mode to the document
+function applyDarkMode(isDarkMode) {
+  if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+}
+
+// Open the settings modal
+function openSettings() {
+  const modal = document.getElementById("settingsModal");
+  modal.style.display = "block";
+}
+
+// Save settings to localStorage
+function saveSettings() {
+  localStorage.setItem('showErrors', $('#showErrors').is(':checked'));
+  localStorage.setItem('darkMode', $('#darkMode').is(':checked'));
+  applyDarkMode($('#darkMode').is(':checked'));
+  evalMath();
 }
 
 /**
@@ -211,6 +288,7 @@ function evalMath() {
   $("#highlights1").html(output);
 }
 
+// Rest of the functions remain the same
 function containsSumKeyword(item) {
   const keywords = ['total', 'sum', 'summe', 'gesamt'];
   return keywords.some(keyword => item.toLowerCase().includes(keyword));
