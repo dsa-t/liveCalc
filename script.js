@@ -618,25 +618,26 @@ function copyURLtoClipboard() {
 }
 
 function shareLink() {
-  // Check if Web Share API is supported
   if (navigator.share) {
-    const title = 'liveCalc Calculation';
-    const url = window.location.href;
+    const shareData = {
+      title: 'liveCalc Calculation',
+      text: 'Check out this calculation with liveCalc', 
+      url: window.location.href
+    };
     
-    navigator.share({
-      title: title,
-      url: url
-    })
-    .then(() => {
-      console.log('Successfully shared');
-    })
-    .catch((error) => {
-      console.error('Error sharing:', error);
-      // Fallback to copy link if sharing fails
-      copyURLtoClipboard();
-    });
+    setTimeout(() => {
+      navigator.share(shareData)
+        .then(() => {
+          console.log('Successfully shared');
+          showCopyMessage('Successfully shared!');
+        })
+        .catch((error) => {
+          console.error('Error sharing:', error);
+          showCopyMessage('Sharing failed. Link copied to clipboard instead.');
+          copyURLtoClipboard();
+        });
+    }, 100);
   } else {
-    // Fallback for browsers that don't support Web Share API
     copyURLtoClipboard();
     showCopyMessage('Web Share not supported. Link copied to clipboard instead!');
   }
