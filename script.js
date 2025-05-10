@@ -66,29 +66,18 @@ function initializeKeyboardBehavior() {
   // Create a hidden input that will be used to trigger the numeric keyboard
   const hiddenInput = document.createElement('input');
   hiddenInput.setAttribute('type', 'password');
-  
-  // Make it truly invisible and prevent scrolling/interaction issues
-  hiddenInput.style.position = 'absolute'; // Use absolute instead of fixed to prevent scrolling
-  hiddenInput.style.top = '0px';
-  hiddenInput.style.left = '0px';
-  hiddenInput.style.opacity = '0';
-  hiddenInput.style.width = '1px';
-  hiddenInput.style.height = '1px';
-  hiddenInput.style.pointerEvents = 'none'; // Ensure it doesn't intercept other interactions
-  hiddenInput.style.zIndex = '-999'; // Put it behind everything
-  hiddenInput.style.padding = '0';
-  hiddenInput.style.margin = '0';
-  hiddenInput.style.border = 'none';
-  hiddenInput.style.outline = 'none';
-  hiddenInput.style.resize = 'none';
-  hiddenInput.style.background = 'transparent';
-  hiddenInput.tabIndex = -1; // Remove from tab order
-  
-  // Add to the textarea's parent to keep it within the same scrollable container
-  textarea.parentNode.appendChild(hiddenInput);
+  hiddenInput.style.position = 'fixed';
+  hiddenInput.style.bottom = '0';
+  hiddenInput.style.left = '0';
+  hiddenInput.style.opacity = '1';  // Make it visible during development
+  hiddenInput.style.width = '100%';
+  hiddenInput.style.height = '60px';
+  hiddenInput.style.zIndex = '9999';
+  hiddenInput.style.backgroundColor = 'rgba(255,255,255,0.8)';
+  document.body.appendChild(hiddenInput);
   
   // When the textarea is clicked, focus on the hidden input
-  textarea.addEventListener('click', function(e) {
+  textarea.addEventListener('click', function() {
     // Current selection points
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -101,14 +90,6 @@ function initializeKeyboardBehavior() {
     
     // Focus the hidden input to show the numeric+letter keyboard
     hiddenInput.focus();
-    
-    // Prevent scroll jumping
-    window.setTimeout(() => {
-      if (document.activeElement === hiddenInput) {
-        // Keep the visual focus on the textarea
-        textarea.classList.add('focused');
-      }
-    }, 10);
   });
   
   // Listen for input on the hidden field
