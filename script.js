@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeApp();
   initializeModal();
   initializeDarkMode();
-  initializeKeyboardBehavior(); // Added keyboard behavior initialization
 
   updateMath();
 }, false);
@@ -51,34 +50,6 @@ function initializeApp() {
 
   $('#frame1').on('scroll', function() {
     $('.bed-highlights').css('transform', `translate(${-this.scrollLeft}px, ${-this.scrollTop}px)`);
-  });
-}
-
-// Add this function for better keyboard behavior
-function initializeKeyboardBehavior() {
-  const textarea = document.getElementById('frame1');
-  
-  // This is a hack to show a better keyboard on Android devices
-  textarea.addEventListener('focus', function() {
-    // Save the current value
-    const currentValue = this.value;
-    
-    // Set type to password and back to text quickly
-    // This triggers the desired keyboard on many Android devices
-    this.setAttribute('type', 'password');
-    
-    // Need to use setTimeout to ensure the attribute change takes effect
-    setTimeout(() => {
-      this.setAttribute('type', 'text');
-      // Restore the value as changing type can clear it
-      this.value = currentValue;
-      
-      // Position cursor at end
-      if (this.setSelectionRange) {
-        const len = this.value.length;
-        this.setSelectionRange(len, len);
-      }
-    }, 1);
   });
 }
 
