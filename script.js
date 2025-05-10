@@ -621,7 +621,6 @@ function shareLink() {
   if (navigator.share) {
     const shareData = {
       title: 'liveCalc Calculation',
-      text: 'Check out this calculation with liveCalc', 
       url: window.location.href
     };
     
