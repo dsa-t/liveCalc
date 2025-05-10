@@ -68,33 +68,28 @@ function initializeKeyboardBehavior() {
   hiddenInput.setAttribute('type', 'password');
   
   // Make it truly invisible and prevent scrolling/interaction issues
-  hiddenInput.style.position = 'absolute';
+  hiddenInput.style.position = 'absolute'; // Use absolute instead of fixed to prevent scrolling
   hiddenInput.style.top = '0px';
   hiddenInput.style.left = '0px';
   hiddenInput.style.opacity = '0';
   hiddenInput.style.width = '1px';
   hiddenInput.style.height = '1px';
-  hiddenInput.style.pointerEvents = 'none';
-  hiddenInput.style.zIndex = '-999';
+  hiddenInput.style.pointerEvents = 'none'; // Ensure it doesn't intercept other interactions
+  hiddenInput.style.zIndex = '-999'; // Put it behind everything
   hiddenInput.style.padding = '0';
   hiddenInput.style.margin = '0';
   hiddenInput.style.border = 'none';
   hiddenInput.style.outline = 'none';
   hiddenInput.style.resize = 'none';
   hiddenInput.style.background = 'transparent';
-  hiddenInput.tabIndex = -1;
+  hiddenInput.tabIndex = -1; // Remove from tab order
   
   // Add to the textarea's parent to keep it within the same scrollable container
   textarea.parentNode.appendChild(hiddenInput);
   
-  // Track if we're using the keyboard
-  let isKeyboardActive = false;
-  
   // When the textarea is clicked, focus on the hidden input
   textarea.addEventListener('click', function(e) {
-    if (isKeyboardActive) return;
-    
-    // Store current selection points
+    // Current selection points
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const currentValue = textarea.value;
@@ -104,28 +99,17 @@ function initializeKeyboardBehavior() {
     hiddenInput.dataset.selectionEnd = end;
     hiddenInput.dataset.textareaValue = currentValue;
     
-    // Set the keyboard as active
-    isKeyboardActive = true;
-    
     // Focus the hidden input to show the numeric+letter keyboard
     hiddenInput.focus();
     
-    // Create and show a blinking caret in the textarea
-    showVisualCaret(textarea, start);
+    // Prevent scroll jumping
+    window.setTimeout(() => {
+      if (document.activeElement === hiddenInput) {
+        // Keep the visual focus on the textarea
+        textarea.classList.add('focused');
+      }
+    }, 10);
   });
-  
-  // Function to show a visible caret in the textarea
-  function showVisualCaret(textarea, position) {
-    // Make sure the textarea has focus styling
-    textarea.classList.add('focused');
-    
-    // Set the selection so the caret blinks natively
-    textarea.setSelectionRange(position, position);
-    
-    // Create a focus event to trigger the browser's caret display
-    const focusEvent = new Event('focus', { bubbles: true });
-    textarea.dispatchEvent(focusEvent);
-  }
   
   // Listen for input on the hidden field
   hiddenInput.addEventListener('input', function(e) {
@@ -153,9 +137,7 @@ function initializeKeyboardBehavior() {
       
       // Update cursor position
       const newPosition = cursorPos + 1;
-      
-      // Update the visual caret
-      showVisualCaret(textarea, newPosition);
+      textarea.setSelectionRange(newPosition, newPosition);
       
       // Update stored data
       hiddenInput.dataset.cursorPos = newPosition;
@@ -198,9 +180,7 @@ function initializeKeyboardBehavior() {
       
       // Update textarea
       textarea.value = newValue;
-      
-      // Update the visual caret
-      showVisualCaret(textarea, newPosition);
+      textarea.setSelectionRange(newPosition, newPosition);
       
       // Update stored data
       hiddenInput.dataset.cursorPos = newPosition;
@@ -211,25 +191,6 @@ function initializeKeyboardBehavior() {
       const event = new Event('input', { bubbles: true });
       textarea.dispatchEvent(event);
     }
-  });
-  
-  // Allow for normal focus on the textarea
-  textarea.addEventListener('focus', function() {
-    if (!isKeyboardActive) {
-      textarea.classList.add('focused');
-    }
-  });
-  
-  textarea.addEventListener('blur', function() {
-    if (!isKeyboardActive) {
-      textarea.classList.remove('focused');
-    }
-  });
-  
-  // Reset keyboard active state if hiddenInput loses focus
-  hiddenInput.addEventListener('blur', function() {
-    isKeyboardActive = false;
-    textarea.classList.remove('focused');
   });
 }
 
