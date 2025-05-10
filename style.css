@@ -9,7 +9,6 @@ body {
   max-width: 600px;
 }
 
-/* Dropdown Menu Styles */
 .dropdown {
   position: relative;
   display: inline-block;
@@ -117,13 +116,26 @@ body.dark-mode .dropdown-content a:hover {
 .content {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100%;
+  align-items: flex-start;
+  padding: 0 5px;
 }
 
 .split.right {
   width: 99%;
   max-width: 600px;
+}
+
+.bed-input {
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  z-index: 2;
+  white-space: nowrap;
+  overflow: scroll;
 }
 
 .bed-container {
@@ -135,6 +147,7 @@ body.dark-mode .dropdown-content a:hover {
   border: 1px solid #ccc;
   border-radius: 5px;
   background-color: none;
+  height: calc(100vh - 50px);
 }
 
 .bed-backdrop {
@@ -150,22 +163,11 @@ body.dark-mode .dropdown-content a:hover {
   white-space: pre;
   color: #129dff;
   padding: 10px;
+  overflow: hidden;
 }
 
 .error-text {
   color: #ff3333;
-}
-
-.bed-input {
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  border: none;
-  outline: none;
-  resize: none;
-  z-index: 2;
-  white-space: nowrap;
 }
 
 .bed-content {
@@ -176,14 +178,13 @@ body.dark-mode .dropdown-content a:hover {
 }
 
 .ta {
-  height: calc(100vh - 45px);
+  height: calc(100vh - 50px);
 }
 
 .sum-value {
   text-decoration: underline;
 }
 
-/* Settings Modal Styles */
 .modal {
   display: none;
   position: fixed;
@@ -276,7 +277,6 @@ body.dark-mode .dropdown-content a:hover {
   }
 }
 
-/* Dark Mode Styles */
 body.dark-mode {
   background-color: #222;
   color: #e0e0e0;
@@ -338,7 +338,6 @@ body.dark-mode .sum-value {
   color: #4db8ff;
 }
 
-/* Precision Control Styles */
 .precision-control {
   display: flex;
   align-items: center;
@@ -356,7 +355,7 @@ body.dark-mode .sum-value {
   font-weight: bold;
   background-color: #e9e9e9;
   border: 1px solid #ccc;
-  border-radius: 4px; /* Changed from 50% to 4px for square shape */
+  border-radius: 4px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -407,7 +406,6 @@ body.dark-mode .sum-value {
   }
 }
 
-/* Dark mode for precision controls */
 body.dark-mode .precision-btn {
   background-color: #444;
   color: #e0e0e0;
@@ -428,4 +426,19 @@ body.dark-mode #precision {
   color: #e0e0e0;
   border-color: #555;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.full-width-mode {
+  width: 100%;
+  max-width: 100%;
+}
+
+body.full-width-mode .split.right {
+  width: 100%;
+  max-width: 100%;
+}
+
+body.full-width-mode .bed-input,
+body.full-width-mode .bed-highlights {
+  width: 100%;
 }

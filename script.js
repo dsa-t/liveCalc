@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeApp();
   initializeModal();
   initializeDarkMode();
+  
+  // Apply fullscreen mode on load if setting is enabled
+  const fullscreenModeEnabled = localStorage.getItem('fullscreenMode') === 'true';
+  toggleFullscreenMode(fullscreenModeEnabled);
 
   updateMath();
 }, false);
@@ -86,6 +90,12 @@ function initializeModal() {
     updateMath();
   });
   
+  $('#fullscreenMode').on('change', function() {
+    const isFullscreen = $(this).is(':checked');
+    localStorage.setItem('fullscreenMode', isFullscreen);
+    toggleFullscreenMode(isFullscreen);
+  });
+  
   $('#precision').on('change', function() {
     const precision = parseInt($(this).val()) || DEFAULT_PRECISION;
     localStorage.setItem('precision', precision);
@@ -134,6 +144,14 @@ function applyDarkMode(isDarkMode) {
   }
 }
 
+function toggleFullscreenMode(isFullscreen) {
+  if (isFullscreen) {
+    document.body.classList.add('full-width-mode');
+  } else {
+    document.body.classList.remove('full-width-mode');
+  }
+}
+
 function openSettings() {
   const modal = document.getElementById("settingsModal");
   modal.style.display = "block";
@@ -154,6 +172,10 @@ function loadSettings() {
   const alignToMaxLength = alignmentState !== null ? alignmentState === 'true' : false;
   $('#alignToMaxLength').prop('checked', alignToMaxLength);
   
+  const fullscreenState = localStorage.getItem('fullscreenMode');
+  const fullscreenMode = fullscreenState !== null ? fullscreenState === 'true' : false;
+  $('#fullscreenMode').prop('checked', fullscreenMode);
+  
   const precisionState = localStorage.getItem('precision');
   const precision = precisionState !== null ? parseInt(precisionState) : DEFAULT_PRECISION;
   $('#precision').val(precision || DEFAULT_PRECISION);
@@ -163,11 +185,13 @@ function saveSettings() {
   const showErrors = $('#showErrors').is(':checked');
   const darkMode = $('#darkMode').is(':checked');
   const alignToMaxLength = $('#alignToMaxLength').is(':checked');
+  const fullscreenMode = $('#fullscreenMode').is(':checked');
   const precision = parseInt($('#precision').val()) || DEFAULT_PRECISION;
   
   localStorage.setItem('showErrors', showErrors);
   localStorage.setItem('darkMode', darkMode);
   localStorage.setItem('alignToMaxLength', alignToMaxLength);
+  localStorage.setItem('fullscreenMode', fullscreenMode);
   localStorage.setItem('precision', precision);
   
   updatePrecisionConfig(precision);
