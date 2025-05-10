@@ -58,36 +58,27 @@ function initializeApp() {
 function initializeKeyboardBehavior() {
   const textarea = document.getElementById('frame1');
   
-  // Only apply on mobile devices
-  if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-    return;
-  }
-  
-  // Create a hidden password input that will be used to trigger the numeric keyboard
-  const passwordInput = document.createElement('input');
-  passwordInput.setAttribute('type', 'password');
-  passwordInput.style.position = 'absolute';
-  passwordInput.style.left = '-9999px';
-  passwordInput.style.height = '0px';
-  passwordInput.style.opacity = '0';
-  document.body.appendChild(passwordInput);
-  
-  // When the textarea is clicked, focus on the password input instead
-  textarea.addEventListener('click', function(e) {
-    // Only intercept the first click
-    if (!textarea.dataset.keyboardInitialized) {
-      e.preventDefault();
-      passwordInput.focus();
+  // This is a hack to show a better keyboard on Android devices
+  textarea.addEventListener('focus', function() {
+    // Save the current value
+    const currentValue = this.value;
+    
+    // Set type to password and back to text quickly
+    // This triggers the desired keyboard on many Android devices
+    this.setAttribute('type', 'password');
+    
+    // Need to use setTimeout to ensure the attribute change takes effect
+    setTimeout(() => {
+      this.setAttribute('type', 'text');
+      // Restore the value as changing type can clear it
+      this.value = currentValue;
       
-      // Listen for the blur event on the password input
-      passwordInput.addEventListener('blur', function() {
-        // When password input loses focus, focus back on textarea
-        setTimeout(() => {
-          textarea.focus();
-          textarea.dataset.keyboardInitialized = 'true';
-        }, 100);
-      }, { once: true });
-    }
+      // Position cursor at end
+      if (this.setSelectionRange) {
+        const len = this.value.length;
+        this.setSelectionRange(len, len);
+      }
+    }, 1);
   });
 }
 
