@@ -63,114 +63,30 @@ function initializeKeyboardBehavior() {
     return;
   }
   
-  // Create a hidden input that will be used to trigger the numeric keyboard
-  const hiddenInput = document.createElement('input');
-  hiddenInput.setAttribute('type', 'password');
-  hiddenInput.style.position = 'fixed';
-  hiddenInput.style.bottom = '0';
-  hiddenInput.style.left = '0';
-  hiddenInput.style.opacity = '1';  // Make it visible during development
-  hiddenInput.style.width = '100%';
-  hiddenInput.style.height = '60px';
-  hiddenInput.style.zIndex = '9999';
-  hiddenInput.style.backgroundColor = 'rgba(255,255,255,0.8)';
-  document.body.appendChild(hiddenInput);
+  // Create a hidden password input that will be used to trigger the numeric keyboard
+  const passwordInput = document.createElement('input');
+  passwordInput.setAttribute('type', 'password');
+  passwordInput.style.position = 'absolute';
+  passwordInput.style.left = '-9999px';
+  passwordInput.style.height = '0px';
+  passwordInput.style.opacity = '0';
+  document.body.appendChild(passwordInput);
   
-  // When the textarea is clicked, focus on the hidden input
-  textarea.addEventListener('click', function() {
-    // Current selection points
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentValue = textarea.value;
-    
-    // Store the current state in data attributes
-    hiddenInput.dataset.cursorPos = start;
-    hiddenInput.dataset.selectionEnd = end;
-    hiddenInput.dataset.textareaValue = currentValue;
-    
-    // Focus the hidden input to show the numeric+letter keyboard
-    hiddenInput.focus();
-  });
-  
-  // Listen for input on the hidden field
-  hiddenInput.addEventListener('input', function(e) {
-    // Get the character typed
-    const inputValue = hiddenInput.value;
-    const character = inputValue[inputValue.length - 1] || '';
-    
-    // Clear the hidden input for the next character
-    hiddenInput.value = '';
-    
-    if (character) {
-      // Get stored position data
-      const cursorPos = parseInt(hiddenInput.dataset.cursorPos) || 0;
-      const selectionEnd = parseInt(hiddenInput.dataset.selectionEnd) || cursorPos;
-      const textareaValue = hiddenInput.dataset.textareaValue || textarea.value;
-      
-      // Insert the character at the cursor position
-      const newValue = 
-        textareaValue.substring(0, cursorPos) + 
-        character + 
-        textareaValue.substring(selectionEnd);
-      
-      // Update textarea
-      textarea.value = newValue;
-      
-      // Update cursor position
-      const newPosition = cursorPos + 1;
-      textarea.setSelectionRange(newPosition, newPosition);
-      
-      // Update stored data
-      hiddenInput.dataset.cursorPos = newPosition;
-      hiddenInput.dataset.selectionEnd = newPosition;
-      hiddenInput.dataset.textareaValue = newValue;
-      
-      // Trigger the input event on the textarea
-      const event = new Event('input', { bubbles: true });
-      textarea.dispatchEvent(event);
-    }
-  });
-  
-  // Make sure we can handle backspaces
-  hiddenInput.addEventListener('keydown', function(e) {
-    // Get stored position data
-    const cursorPos = parseInt(hiddenInput.dataset.cursorPos) || 0;
-    const selectionEnd = parseInt(hiddenInput.dataset.selectionEnd) || cursorPos;
-    const textareaValue = hiddenInput.dataset.textareaValue || textarea.value;
-    
-    // Handle backspace
-    if (e.key === 'Backspace' && cursorPos > 0) {
+  // When the textarea is clicked, focus on the password input instead
+  textarea.addEventListener('click', function(e) {
+    // Only intercept the first click
+    if (!textarea.dataset.keyboardInitialized) {
       e.preventDefault();
+      passwordInput.focus();
       
-      let newValue;
-      let newPosition;
-      
-      // If there's selected text
-      if (cursorPos !== selectionEnd) {
-        newValue = 
-          textareaValue.substring(0, cursorPos) + 
-          textareaValue.substring(selectionEnd);
-        newPosition = cursorPos;
-      } else {
-        // No selection, just remove previous character
-        newValue = 
-          textareaValue.substring(0, cursorPos - 1) + 
-          textareaValue.substring(cursorPos);
-        newPosition = cursorPos - 1;
-      }
-      
-      // Update textarea
-      textarea.value = newValue;
-      textarea.setSelectionRange(newPosition, newPosition);
-      
-      // Update stored data
-      hiddenInput.dataset.cursorPos = newPosition;
-      hiddenInput.dataset.selectionEnd = newPosition;
-      hiddenInput.dataset.textareaValue = newValue;
-      
-      // Trigger the input event
-      const event = new Event('input', { bubbles: true });
-      textarea.dispatchEvent(event);
+      // Listen for the blur event on the password input
+      passwordInput.addEventListener('blur', function() {
+        // When password input loses focus, focus back on textarea
+        setTimeout(() => {
+          textarea.focus();
+          textarea.dataset.keyboardInitialized = 'true';
+        }, 100);
+      }, { once: true });
     }
   });
 }
