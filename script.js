@@ -617,6 +617,32 @@ function copyURLtoClipboard() {
   return false;
 }
 
+function shareLink() {
+  // Check if Web Share API is supported
+  if (navigator.share) {
+    const title = 'liveCalc Calculation';
+    const url = window.location.href;
+    
+    navigator.share({
+      title: title,
+      url: url
+    })
+    .then(() => {
+      console.log('Successfully shared');
+    })
+    .catch((error) => {
+      console.error('Error sharing:', error);
+      // Fallback to copy link if sharing fails
+      copyURLtoClipboard();
+    });
+  } else {
+    // Fallback for browsers that don't support Web Share API
+    copyURLtoClipboard();
+    showCopyMessage('Web Share not supported. Link copied to clipboard instead!');
+  }
+  return false;
+}
+
 function showCopyMessage(message) {
   // Create or get existing message element
   let messageElement = document.getElementById('copyMessage');
