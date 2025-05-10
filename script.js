@@ -40,9 +40,10 @@ function initializeApp() {
     if (!$(this).data('typing')) {
       $(this).data('typing', true);
       setTimeout(() => {
-        const encodedMath = encodeDataForURL($('#frame1').val());
+        const input = $('#frame1').val();
+        const encodedMath = input.length > 0 ? encodeDataForURL(input) : '';
         window.location.hash = encodedMath;
-        localStorage.setItem('liveCalcLastInput', $('#frame1').val());
+        localStorage.setItem('liveCalcLastInput', input);
         $(this).data('typing', false);
       }, 1000);
     }
@@ -267,7 +268,7 @@ function decompressData(str) {
     // First try to decompress as LZString compressed content
     const decompressed = LZString.decompressFromBase64(str);
     // If result is not null and has length, it was successfully decompressed
-    if (decompressed !== null) {
+    if (decompressed !== null && decompressed.length > 0) {
       return decompressed;
     }
   } catch (e) {
