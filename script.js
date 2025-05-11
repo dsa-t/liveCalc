@@ -620,7 +620,6 @@ function copyURLtoClipboard() {
 function shareLink() {
   if (navigator.share) {
     const shareData = {
-      title: 'liveCalc Calculation',
       url: window.location.href
     };
     
