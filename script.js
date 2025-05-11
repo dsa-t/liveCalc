@@ -44,10 +44,7 @@ function initializeApp() {
     if (!$(this).data('typing')) {
       $(this).data('typing', true);
       setTimeout(() => {
-        const input = $('#frame1').val();
-        const encodedMath = input.length > 0 ? encodeDataForURL(input) : '';
-        window.location.hash = encodedMath;
-        localStorage.setItem('liveCalcLastInput', input);
+        updateURLHash();
         $(this).data('typing', false);
       }, 1000);
     }
@@ -283,11 +280,11 @@ function b64_to_utf8(str) {
   return decodeURIComponent(escape(window.atob(str)));
 }
 
-function compressData(str) {
+function encodeDataForURL(str) {
   return LZString.compressToBase64(str);
 }
 
-function decompressData(str) {  
+function decodeDataFromURL(str) {  
   try {
     // First try to decompress as LZString compressed content
     const decompressed = LZString.decompressFromBase64(str);
@@ -307,14 +304,6 @@ function decompressData(str) {
     console.error("Failed to decode base64 data:", e);
     return str;
   }
-}
-
-function encodeDataForURL(str) {
-  return compressData(str);
-}
-
-function decodeDataFromURL(str) {
-  return decompressData(str);
 }
 
 function evalInput(customFormatter = {}){
@@ -611,16 +600,26 @@ function copyResults() {
   return false;
 }
 
+function updateURLHash() {
+  const input = $('#frame1').val();
+  const encodedMath = input.length > 0 ? encodeDataForURL(input) : '';
+  window.location.hash = encodedMath;
+  localStorage.setItem('liveCalcLastInput', input);
+  return window.location.href;
+}
+
 function copyURLtoClipboard() {
-  const url = window.location.href;
+  const url = updateURLHash();
   copyToClipboard(url, 'Link copied to clipboard!');
   return false;
 }
 
 function shareLink() {
+  const url = updateURLHash();
+  
   if (navigator.share) {
     const shareData = {
-      url: window.location.href
+      url: url
     };
     
     setTimeout(() => {
