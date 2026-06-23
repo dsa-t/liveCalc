@@ -25,6 +25,7 @@ function initializeApp() {
   });
 
   extendMathJsWithBaseConversions();
+  extendMathJsWithUnits();
   
   const hashvalue = window.location.hash.substring(1);
   if (hashvalue.length >= 4) {
@@ -270,6 +271,19 @@ function extendMathJsWithBaseConversions() {
     }
     return originalParse.call(math, expr);
   };
+}
+
+function extendMathJsWithUnits() {
+  math.createUnit({
+    Nm: '1 N m',
+    gf: '0.001 kgf',
+    inHg: '25.4 mmHg',
+    ksi: '1000 psi',
+    thou: '1 mil',
+    rpm: '0.10471975511965977 rad / s',
+    slug: '14.5939029372064 kg',
+    gauss: '1e-4 T',
+  });
 }
 
 function utf8_to_b64(str) {
