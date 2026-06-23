@@ -207,9 +207,9 @@ function updatePrecisionConfig(precision) {
 
 function extendMathJsWithBaseConversions() {
   const baseConfigs = {
-    hex: { base: 16, prefix: '0x' },
-    bin: { base: 2, prefix: '0b' },
-    oct: { base: 8, prefix: '0o' },
+    hex: { base: 16, prefix: '0x', bitsPerDigit: 4 },
+    bin: { base: 2, prefix: '0b', bitsPerDigit: 1 },
+    oct: { base: 8, prefix: '0o', bitsPerDigit: 3 },
     dec: { base: 10, prefix: '' }
   };
   
@@ -227,9 +227,16 @@ function extendMathJsWithBaseConversions() {
       
       if (baseType === 'dec') {
         return math.format(value, {notation: 'fixed'});
-      } else {
-        return math.format(value, {notation: baseType, fraction: 'decimal'}).toLowerCase();
       }
+
+      const formatted = math.format(value, {notation: baseType, fraction: 'decimal'}).toLowerCase();
+      const config = baseConfigs[baseType];
+      const digits = formatted.slice(config.prefix.length);
+      const bitLength = Math.abs(Number(value)).toString(2).length;
+      const alignedBits = Math.max(8, Math.ceil(bitLength / 8) * 8);
+      const width = Math.ceil(alignedBits / config.bitsPerDigit);
+
+      return config.prefix + digits.padStart(width, '0');
     };
   });
   
