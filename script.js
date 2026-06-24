@@ -212,63 +212,55 @@ function extendMathJsWithBaseConversions() {
     oct: { base: 8, prefix: '0o', bitsPerDigit: 3 },
     dec: { base: 10, prefix: '' }
   };
-  
+
+  function toInteger(value) {
+    return math.typeOf(value) === 'BigNumber' ? value.toNumber() : Number(value);
+  }
+
+  function getAlignedBits(n) {
+    const bitLength = n < 0
+      ? Math.max(1, (Math.abs(n) - 1).toString(2).length)
+      : Math.max(1, n.toString(2).length);
+    return Math.max(8, Math.ceil(bitLength / 8) * 8);
+  }
+
+  function formatBase(value, baseType) {
+    const config = baseConfigs[baseType];
+    const n = toInteger(value);
+    const alignedBits = getAlignedBits(n);
+    const width = Math.ceil(alignedBits / config.bitsPerDigit);
+    const digits = n < 0
+      ? (BigInt(n) & ((1n << BigInt(alignedBits)) - 1n)).toString(config.base)
+      : n.toString(config.base);
+    return config.prefix + digits.padStart(width, '0');
+  }
+
   const conversions = {};
-  
   Object.keys(baseConfigs).forEach(baseType => {
     conversions[`to_${baseType}`] = function(value) {
       if (math.typeOf(value) === 'Unit') {
         throw new Error('Must be unitless');
       }
-      
-      if (baseType !== 'dec' && (!Number.isInteger(Number(value)))) {
+      const n = toInteger(value);
+      if (baseType !== 'dec' && !Number.isInteger(n)) {
         throw new Error(`Can't convert fractional numbers to ${baseType}`);
       }
-      
-      if (baseType === 'dec') {
-        return math.format(value, {notation: 'fixed'});
-      }
-
-      const formatted = math.format(value, {notation: baseType, fraction: 'decimal'}).toLowerCase();
-      const config = baseConfigs[baseType];
-      const digits = formatted.slice(config.prefix.length);
-      const bitLength = Math.abs(Number(value)).toString(2).length;
-      const alignedBits = Math.max(8, Math.ceil(bitLength / 8) * 8);
-      const width = Math.ceil(alignedBits / config.bitsPerDigit);
-
-      return config.prefix + digits.padStart(width, '0');
+      return baseType === 'dec' ? math.format(value, { notation: 'fixed' }) : formatBase(value, baseType);
     };
   });
-  
-  Object.keys(baseConfigs).forEach(baseType => {
-    if (baseType === 'dec') return;
-    const config = baseConfigs[baseType];
-    conversions[`from_${baseType}`] = function(value) {
-      if (typeof value === 'string') {
-        value = value.toLowerCase().replace(new RegExp(`^${config.prefix}`), '');
-      }
-      return parseInt(value, config.base);
-    };
-  });
-  
+
   math.import(conversions);
-  
+
   const originalParse = math.parse;
   math.parse = function(expr) {
     if (typeof expr === 'string') {
-      Object.keys(baseConfigs).forEach(baseType => {
-        if (baseType === 'dec') return;
-        const config = baseConfigs[baseType];
-        const regex = new RegExp(`${config.prefix}([0-9a-fA-F]+)`, 'g');
-        expr = expr.replace(regex, `from_${baseType}("$1")`);
-      });
-      
-      const conversionKeywords = ['in', 'to'];
-      conversionKeywords.forEach(keyword => {
+      ['in', 'to'].forEach(keyword => {
         Object.keys(baseConfigs).forEach(baseType => {
+          if (baseType === 'dec') return;
           const pattern = new RegExp(`(.+?)\\s+${keyword}\\s+${baseType}(?:\\b|$)`, 'gi');
           expr = expr.replace(pattern, (match, group) => {
-            if (group.trim()) {
+            const trimmed = group.trim();
+            if (trimmed && !/^(?:0x|0b|0o)$/i.test(trimmed)) {
               return `to_${baseType}(${group})`;
             }
             return match;
