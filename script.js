@@ -701,7 +701,7 @@ function exportFormatResults() {
     errorLine: (item, errorMessage) => `${item}\n`,
     emptyLine: (item) => `${item}\n`
   };
-  
+
   // Use evalInput with our custom formatters
   return evalInput(exportFormatters);
 }
